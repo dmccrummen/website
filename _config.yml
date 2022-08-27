@@ -25,11 +25,10 @@ minimal_mistakes_skin: dark
 search: false
 url: "https://danielmccrummen.com"
 repository: "dmccrummen/website"
-logo: "assets/images/joint-logo-white.png"
+logo: "/assets/images/joint-logo-white.png"
 
 header:
-  image: "assets/images/unsplash.jpg"
-
+  image: "/assets/images/unsplash.jpg"
 
 # Build settings
 markdown: kramdown
