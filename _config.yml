@@ -16,7 +16,7 @@
 title: Daniel McCrummen Character TD
 title_separator: "-"
 subtitle: "Rigging, Scripting, Simulation"
-masthead_title: "Texas Tech!"
+# masthead_title: "Texas Tech!"
 email: daniel.mccrummen@gmail.com
 description: "An amazing website."
 twitter_username: username
@@ -63,7 +63,7 @@ author:
   bio    : "Character Technical Director with 10+ years experience in the animated film, commerical, and games industry."
   links:
     - label: "LinkedIn"
-      icon: "fa-brands fa-linkedin"
+      icon: "fab fa-fw fa-linkedin"
       url: "https://www.linkedin.com/in/daniel-mccrummen-b58a091/"
     - label: "Vimeo"
       icon: "fab fa-fw fa-twitter-square"
