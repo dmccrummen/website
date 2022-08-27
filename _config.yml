@@ -14,8 +14,8 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 title: Daniel McCrummen Character TD
-email:
-description: "Character rigging artist, with Autodesk Maya experience, specialized in rigging, scripting, and simultion work."
+email: daniel.mccrummen@gmail.com
+description: 
 twitter_username: username
 github_username: username
 minimal_mistakes_skin: dark
@@ -62,26 +62,7 @@ author:
     - label: "LinkedIn"
       icon: "fa-brands fa-linkedin"
       url: "https://www.linkedin.com/in/daniel-mccrummen-b58a091/"
-    - label: "IMDB"
-      icon: "fa fa-imdb"
-      url: "https://www.imdb.com/name/nm4721727/"   
-    - label: "Vimeo"
-      icon: "fa fa-vimeo"
-      url: "https://vimeo.com/dmccrummen"        
-
-
-# footer:
-#   links:
-#     - label: "Twitter"
-#       icon: "fab fa-fw fa-twitter-square"
-#       url: "https://twitter.com/"
-#     - label: "GitHub"
-#       icon: "fab fa-fw fa-github"
-#       url: "https://github.com/"
-#     - label: "Instagram"
-#       icon: "fab fa-fw fa-instagram"
-#       url: "https://instagram.com/"
-
+    
 defaults:
   # _posts
   - scope:
