@@ -22,7 +22,11 @@ description: "An amazing website."
 twitter_username: username
 github_username: username
 minimal_mistakes_skin: dark
-search: true
+search: false
+url: "https://danielmccrummen.com"
+repository: "dmccrummen/website"
+logo: "assets/images/joint-logo-white.png"
+
 
 # Build settings
 markdown: kramdown
@@ -80,8 +84,8 @@ defaults:
     values:
       layout: single
       author_profile: true
-      read_time: true
-      comments: true
+      read_time: false
+      comments: false
       share: true
       related: true
   # _pages
@@ -98,3 +102,6 @@ category_archive:
 tag_archive:
   type: liquid
   path: /tags/
+
+atom_feed:
+hide: true
