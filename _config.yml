@@ -15,10 +15,10 @@
 # in the templates via {{ site.myvariable }}.
 title: Daniel McCrummen Character TD
 email: daniel.mccrummen@gmail.com
-description: 
+description: "An amazing website."
 twitter_username: username
 github_username: username
-minimal_mistakes_skin: dark
+minimal_mistakes_skin: default
 search: true
 
 # Build settings
@@ -60,7 +60,7 @@ author:
   bio    : "Character Technical Director with 10+ years experience in the animated film, commerical, and games industry."
   links:
     - label: "LinkedIn"
-      icon: "fa-brands fa-linkedin"
+      icon: "fas fa-fw fa-brands fa-linkedin"
       url: "https://www.linkedin.com/in/daniel-mccrummen-b58a091/"
     
 defaults:
