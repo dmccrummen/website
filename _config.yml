@@ -24,17 +24,12 @@ github_username: username
 minimal_mistakes_skin: dark
 search: true
 
-header:
-  video:
-    id: 212731897
-    provider: vimeo
-
 # Build settings
 markdown: kramdown
 remote_theme: mmistakes/minimal-mistakes
 # Outputting
 permalink: /:categories/:title/
-paginate: 5
+paginate: 1
 paginate_path: /page:num/
 timezone: # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
