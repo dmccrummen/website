@@ -27,6 +27,9 @@ url: "https://danielmccrummen.com"
 repository: "dmccrummen/website"
 logo: "assets/images/joint-logo-white.png"
 
+header:
+  image: "assets/images/unsplash.jpg"
+
 
 # Build settings
 markdown: kramdown
