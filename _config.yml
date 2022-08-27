@@ -16,12 +16,10 @@
 title: Daniel McCrummen Character TD
 email:
 description: >- # this means to ignore newlines until "baseurl:"
-  Write an awesome description for your new site here. You can edit this
-  line in _config.yml. It will appear in your document head meta (for
-  Google search results) and in your feed.xml site description.
+  Character rigging artist, with Autodesk Maya experience, specialized in rigging, scripting, and simultion work.
 twitter_username: username
 github_username: username
-minimal_mistakes_skin: default
+minimal_mistakes_skin: dark
 search: true
 
 # Build settings
@@ -63,13 +61,13 @@ author:
   bio    : "Character Technical Director with 10+ years experience in the animated film, commerical, and games industry."
   links:
     - label: "LinkedIn"
-      icon: "fas fa-fw fa-linkedin-square"
+      icon: "fa fa-linkedin-square"
       url: "https://www.linkedin.com/in/daniel-mccrummen-b58a091/"
     - label: "IMDB"
-      icon: "fas fa-fw fa-imdb"
+      icon: "fa fa-imdb"
       url: "https://www.imdb.com/name/nm4721727/"   
     - label: "Vimeo"
-      icon: "fas fa-fw fa-vimeo"
+      icon: "fa fa-vimeo"
       url: "https://vimeo.com/dmccrummen"        
 
 
