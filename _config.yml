@@ -24,6 +24,11 @@ github_username: username
 minimal_mistakes_skin: dark
 search: true
 
+header:
+  video:
+    id: 212731897
+    provider: vimeo
+
 # Build settings
 markdown: kramdown
 remote_theme: mmistakes/minimal-mistakes
@@ -68,6 +73,9 @@ author:
     - label: "Vimeo"
       icon: "fab fa-fw fa-twitter-square"
       url: "https://vimeo.com/dmccrummen"     
+    - label: "IMDB"
+      icon: "fab fa-fw fa-imdb"
+      url: "https://www.imdb.com/name/nm4721727/"       
     
 defaults:
   # _posts
