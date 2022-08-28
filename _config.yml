@@ -22,17 +22,13 @@ github_username: username
 minimal_mistakes_skin: dark
 search: false
 url: "https://danielmccrummen.com"
-repository: "dmccrummen/website"
 logo: "/assets/images/joint-logo-white.png"
-
-header:
-  image: "/assets/images/unsplash.jpg"
 
 # Build settings
 markdown: kramdown
 remote_theme: mmistakes/minimal-mistakes
 # Outputting
-permalink: /:categories/:title/
+permalink: /about/
 timezone: # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
 include:
