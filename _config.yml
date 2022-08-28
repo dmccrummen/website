@@ -13,7 +13,8 @@
 # you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
-title: "Rigging, Scripting, Simulation"
+title: Daniel McCrummen
+subtitle: "Rigging, Scripting, Simulation"
 title_separator: "-"
 email: daniel.mccrummen@gmail.com
 description: "An amazing website."
@@ -21,14 +22,13 @@ twitter_username: username
 github_username: username
 minimal_mistakes_skin: dark
 search: false
-url: "https://danielmccrummen.com"
+# url: "https://danielmccrummen.com"
 logo: "/assets/images/joint-logo-white.png"
 
 # Build settings
 markdown: kramdown
 remote_theme: mmistakes/minimal-mistakes
 # Outputting
-permalink: /about/
 timezone: # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
 include:
