@@ -33,18 +33,6 @@ timezone: # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 include:
   - _pages
 
-# Exclude from processing.
-# The following items will not be processed, by default. Create a custom list
-# to override the default setting.
-# exclude:
-#   - Gemfile
-#   - Gemfile.lock
-#   - node_modules
-#   - vendor/bundle/
-#   - vendor/cache/
-#   - vendor/gems/
-#   - vendor/ruby/
-
 # Plugins (previously gems:)
 plugins:
   - jekyll-paginate
@@ -57,7 +45,11 @@ plugins:
 author:
   name   : "Daniel McCrummen"
   avatar : "/assets/images/bio-photo.jpg"
-  bio    : "Character Technical Director with 10+ years experience in the animated film, commerical, and games industry."
+  bio    : > 
+            Hi! I'm Daniel McCrummen. I’m currently a Senior Character TD at Insomniac Games with 15 years experience in 
+            the animated film, commerical, and games industry.
+            I do take on freelance work from time to time if my schedule is light enough, 
+            but feel free to contact me with inquiries.
   links:
     - label: "LinkedIn"
       icon: "fab fa-fw fa-linkedin"
