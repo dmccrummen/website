@@ -51,9 +51,6 @@ author:
             the animated film, commerical, and games industry.
             I do take on freelance work from time to time if my schedule is light enough, 
             but feel free to contact me with inquiries.
-sidebar:
-  -title: "Resume"
-            
   links:
     - label: "Resume"
       icon: "fab fa-fw fa-solid fa-file"
@@ -66,7 +63,10 @@ sidebar:
       url: "https://vimeo.com/dmccrummen"     
     - label: "IMDB"
       icon: "fab fa-fw fa-imdb"
-      url: "https://www.imdb.com/name/nm4721727/"       
+      url: "https://www.imdb.com/name/nm4721727/"    
+      
+sidebar:
+  -title: "Resume"      
     
 defaults:
   # _pages
