@@ -15,7 +15,7 @@
 # in the templates via {{ site.myvariable }}.
 title: "Rigging, Scripting, Simulation"
 title_separator: "-"
-email: daniel.mccrummen@gmail.com
+
 description: "An amazing website."
 twitter_username: username
 github_username: username
@@ -45,11 +45,15 @@ plugins:
 author:
   name   : "Daniel McCrummen"
   avatar : "/assets/images/bio-photo.jpg"
+  email: daniel.mccrummen@gmail.com
   bio    : > 
             Hi! I'm Daniel McCrummen. I’m currently a Senior Character TD at Insomniac Games with 15 years experience in 
             the animated film, commerical, and games industry.
             I do take on freelance work from time to time if my schedule is light enough, 
             but feel free to contact me with inquiries.
+sidebar:
+  -title: "Resume"
+            
   links:
     - label: "Resume"
       icon: "fab fa-fw fa-solid fa-file"
