@@ -51,6 +51,9 @@ author:
             I do take on freelance work from time to time if my schedule is light enough, 
             but feel free to contact me with inquiries.
   links:
+    - label: "Resume"
+      icon: "fab fa-fw fa-solid fa-file"
+      url: "https://github.com/dmccrummen/website/raw/master/assets/Daniel_McCrummen_Resume.pdf"  
     - label: "LinkedIn"
       icon: "fab fa-fw fa-linkedin"
       url: "https://www.linkedin.com/in/daniel-mccrummen-b58a091/"
