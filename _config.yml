@@ -53,7 +53,7 @@ author:
             but feel free to contact me with inquiries.
   links:
     - label: "Resume"
-      icon: "fa-fw fa-solid fa-file"
+      icon: "fa fa-solid fa-file"
       url: "https://github.com/dmccrummen/website/raw/master/assets/Daniel_McCrummen_Resume.pdf"  
     - label: "LinkedIn"
       icon: "fab fa-fw fa-linkedin"
