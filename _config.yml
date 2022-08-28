@@ -21,7 +21,7 @@ twitter_username: username
 github_username: username
 minimal_mistakes_skin: dark
 search: false
-# url: "https://danielmccrummen.com"
+url: "https://danielmccrummen.com"
 logo: "/assets/images/joint-logo-white.png"
 
 # Build settings
