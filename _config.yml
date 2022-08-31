@@ -19,10 +19,10 @@ title_separator: "-"
 description: "An amazing website."
 twitter_username: username
 github_username: username
-minimal_mistakes_skin: dark
+minimal_mistakes_skin: contrast
 search: false
 url: "https://danielmccrummen.com"
-logo: "/assets/images/joint-logo-white.png"
+logo: "/assets/images/joint-logo-black.png"
 
 # Build settings
 markdown: kramdown
