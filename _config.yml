@@ -28,9 +28,12 @@ logo: "/assets/images/joint-logo-black.png"
 markdown: kramdown
 remote_theme: mmistakes/minimal-mistakes
 # Outputting
+permalink: /:categories/:title/
+paginate_path: /page:num/
 timezone: # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
 include:
+  - .htaccess
   - _pages
 
 # Plugins (previously gems:)
@@ -55,7 +58,7 @@ author:
   links:
     - label: "Resume"
       icon: "fa fa-thin fa-file-csv"
-      url: "https://github.com/dmccrummen/website/raw/master/assets/Daniel_McCrummen_Resume.pdf"  
+      url: "/assets/Daniel_McCrummen_Resume.pdf"  
     - label: "LinkedIn"
       icon: "fab fa-fw fa-linkedin"
       url: "https://www.linkedin.com/in/daniel-mccrummen-b58a091/"
