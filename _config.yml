@@ -21,7 +21,7 @@ twitter_username: username
 github_username: username
 minimal_mistakes_skin: contrast
 search: false
-url: "https://danielmccrummen.com"
+# url: "https://danielmccrummen.com"
 logo: "/assets/images/joint-logo-black.png"
 
 # Build settings
@@ -29,6 +29,7 @@ markdown: kramdown
 remote_theme: mmistakes/minimal-mistakes
 # Outputting
 permalink: /:categories/:title/
+paginate: 5
 paginate_path: /page:num/
 timezone: # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
@@ -69,14 +70,28 @@ author:
       icon: "fab fa-fw fa-imdb"
       url: "https://www.imdb.com/name/nm4721727/"    
           
+# defaults:
+#   # _pages
+#   - scope:
+#       path: "_pages"
+#       type: pages
+#     values:
+#       layout: single
+#       author_profile: true
+
+# Defaults
 defaults:
-  # _pages
+  # _posts
   - scope:
-      path: "_pages"
-      type: pages
+      path: ""
+      type: posts
     values:
       layout: single
       author_profile: true
+      read_time: true
+      comments: # true
+      share: true
+      related: true
 
 category_archive:
   type: liquid
