@@ -15,7 +15,7 @@
 # in the templates via {{ site.myvariable }}.
 title: "Rigging.Scripting.Simulation"
 title_separator: "-"
-subtitle: "Daniel McCrummen/Character TD"
+subtitle: "Daniel McCrummen Character TD"
 
 description: "An amazing website."
 twitter_username: username
@@ -50,7 +50,7 @@ plugins:
   - jekyll-seo-tag
 
 author:
-  name   : "Daniel McCrummen"
+#   name   : "Daniel McCrummen"
   avatar : "/assets/images/bio-photo.jpg"
   email: daniel.mccrummen@gmail.com
   bio    : > 
@@ -59,9 +59,6 @@ author:
             I do take on freelance work from time to time if my schedule is light enough, 
             but feel free to contact me with inquiries.
   links:
-    - label: "Resume"
-      icon: "fa fa-thin fa-file-csv"
-      url: "/assets/Daniel_McCrummen_Resume.pdf"  
     - label: "LinkedIn"
       icon: "fab fa-fw fa-linkedin"
       url: "https://www.linkedin.com/in/daniel-mccrummen-b58a091/"
