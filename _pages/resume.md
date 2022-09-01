@@ -1,9 +1,11 @@
 ---
-classes: wide
-permalink: /about/
 title: "About"
+permalink: /about/
 ---
-<!-- <body> -->
-  <h1>Resume</h1>
-<!--   <p>Open a PDF file <a href="https://github.com/dmccrummen/website/raw/master/assets/Daniel_McCrummen_Resume.pdf"></a>.</p> -->
-<!-- </body> -->
+
+
+This is an example page. It's different from a blog post because it will stay in one place and will show up in your site navigation (in most themes). Most people start with an About page that introduces them to potential site visitors. It might say something like this:
+
+
+
+
