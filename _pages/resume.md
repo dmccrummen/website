@@ -1,4 +1,5 @@
 ---
+classes: wide
 title: "Resume"
 permalink: /resume/
 ---
