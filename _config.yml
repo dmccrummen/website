@@ -62,7 +62,7 @@ author:
       icon: "fab fa-fw fa-linkedin"
       url: "https://www.linkedin.com/in/daniel-mccrummen-b58a091/"
     - label: "Vimeo"
-      icon: "fab fa-fw fa-twitter-square"
+      icon: "fab fa-fw fa-square-vimeo"
       url: "https://vimeo.com/dmccrummen"     
     - label: "IMDB"
       icon: "fab fa-fw fa-imdb"
