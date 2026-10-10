@@ -1,88 +1,25 @@
-# Welcome to Jekyll!
-#
-# This config file is meant for settings that affect your whole blog, values
-# which you are expected to set up once and rarely edit after that. If you find
-# yourself editing this file very often, consider using Jekyll's data files
-# feature for the data you need to update frequently.
-#
-# For technical reasons, this file is *NOT* reloaded automatically when you use
-# 'bundle exec jekyll serve'. If you change this file, please restart the server process.
+# Site settings for danielmccrummen.com
+# Most of the page text lives in _data/site.yml — edit that file to update
+# your bio, reels or links. This file rarely needs to change.
 
-# Site settings
-# These are used to personalize your new site. If you look in the HTML files,
-# you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
-# You can create any custom variable you would like, and they will be accessible
-# in the templates via {{ site.myvariable }}.
-title: "Rigging.Scripting.Simulation"
-title_separator: "-"
-subtitle: "Daniel McCrummen Character TD"
-
-description: "An amazing website."
-twitter_username: username
-github_username: username
-minimal_mistakes_skin: dark
-search: false
-# url: "https://danielmccrummen.com"
-logo: "/assets/images/joint-logo-white.png"
-
-# Build settings
-markdown: kramdown
-remote_theme: mmistakes/minimal-mistakes
-# Outputting
-permalink: /:categories/:title/
-paginate: 5
-paginate_path: /page:num/
-timezone: # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-
-include:
-  - .htaccess
-  - _pages
-
-# Plugins (previously gems:)
-plugins:
-  - jekyll-paginate
-  - jekyll-sitemap
-  - jekyll-gist
-  - jekyll-feed
-  - jemoji
-  - jekyll-include-cache
-  - jekyll-seo-tag
+title: "Daniel McCrummen"
+tagline: "Rigging.Scripting.Simulation"
+description: "Daniel McCrummen is a Lead Character TD at Insomniac Games with 18 years of rigging, scripting and simulation experience across film, commercials and games."
+url: "https://danielmccrummen.com"
+lang: en
+logo: "/assets/images/logo-white.png"
 
 author:
-#   name   : "Daniel McCrummen"
-  avatar : "/assets/images/bio-photo.jpg"
-  email: contact@danielmccrummen.com
-  bio    : > 
-            Hi! I'm Daniel McCrummen. I’m currently a Senior Character TD at Insomniac Games with 15 years experience in 
-            the animated film, commerical, and games industry.
-            I do take on freelance work from time to time if my schedule is light enough, 
-            but feel free to contact me with inquiries.
-  links:
-    - label: "LinkedIn"
-      icon: "fab fa-fw fa-linkedin"
-      url: "https://www.linkedin.com/in/daniel-mccrummen-b58a091/"
-    - label: "Vimeo"
-      icon: "fab fa-fw fa-vimeo"
-      url: "https://vimeo.com/dmccrummen"     
-    - label: "IMDB"
-      icon: "fab fa-fw fa-imdb"
-      url: "https://www.imdb.com/name/nm4721727/"    
-          
-defaults:
-  # _pages
-  - scope:
-      path: "_pages"
-      type: pages
-    values:
-      layout: single
-      author_profile: true  
+  name: "Daniel McCrummen"
 
-category_archive:
-  type: liquid
-  path: /categories/
-tag_archive:
-  type: liquid
-  path: /tags/
+markdown: kramdown
 
-atom_feed:
-  hide: true
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - vendor

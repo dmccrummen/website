@@ -1,0 +1,59 @@
+# Page content for danielmccrummen.com
+# Edit the text below and push — GitHub Pages rebuilds the site automatically.
+
+role: "Lead Character TD"
+studio: "Insomniac Games"
+photo: "/assets/images/bio-photo.jpg"
+bio: >-
+  Hi, I'm Daniel McCrummen, a Lead Character TD at Insomniac Games.
+  For 18 years I've built character rigs and deformation tools across
+  animated film, commercials and games.
+
+email: "contact@danielmccrummen.com"
+resume: "/assets/Daniel_McCrummen_Resume.pdf"
+
+freelance:
+  heading: "Open to freelance"
+  text: "When my schedule allows. Get in touch about rigging, deformers or pipeline tools."
+
+links:
+  - label: "LinkedIn"
+    url: "https://www.linkedin.com/in/daniel-mccrummen-b58a091/"
+  - label: "Vimeo"
+    url: "https://vimeo.com/dmccrummen"
+  - label: "IMDb"
+    url: "https://www.imdb.com/name/nm4721727/"
+
+# To swap a reel, change its vimeo_id and vimeo_hash (the "h=" value
+# in Vimeo's share/embed link) and update the breakdown below it.
+demo_reel:
+  title: "Demo reel"
+  vimeo_id: "333859826"
+  vimeo_hash: "a373536ef0"
+  breakdown:
+    - time: "0:00 – 0:40"
+      name: "Moxy"
+      detail: "Female dolls · face rigging"
+    - time: "0:41 – 0:56"
+      name: "Red Dragon"
+      detail: "Body and face rigging"
+    - time: "0:57 – 1:27"
+      name: "Joaquin, Manolo, General Posada"
+      detail: "Child body and face · body"
+    - time: "1:28 – 2:11"
+      name: "Reggie, Jake"
+      detail: "Body rigging"
+
+tools_reel:
+  eyebrow: "Tools reel"
+  title: "Deformers, built in C++"
+  text: >-
+    Custom Maya plugins for shaping and controlling deformation.
+    The zipper lips node was co-authored with
+    <a href="https://yantor3d.wordpress.com" target="_blank" rel="noopener">Ryan Porter</a>.
+  vimeo_id: "333480995"
+  vimeo_hash: "bc68c94107"
+  chapters:
+    - "0:00 Curve Deformer"
+    - "0:42 Smoothie Deformer"
+    - "1:27 Zipper Lips Node"
