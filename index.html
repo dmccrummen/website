@@ -1,7 +1,61 @@
 ---
-# You don't need to edit this file, it's empty on purpose.
-# Edit theme's home layout instead if you wanna make some changes
-# See: https://jekyllrb.com/docs/themes/#overriding-theme-defaults
-layout: home
-author_profile: true
+layout: default
 ---
+{% assign s = site.data.site %}
+<section id="top" class="hero wrap">
+  <img class="hero-photo" src="{{ s.photo | relative_url }}" alt="Daniel McCrummen" width="132" height="132">
+  <div class="hero-text">
+    <p class="eyebrow">{{ s.role }} · {{ s.studio }}</p>
+    <h1 class="tagline">
+      <img class="tagline-logo" src="{{ site.logo | relative_url }}" alt="" width="56" height="56">
+      <span>Rigging<b>.</b><wbr>Scripting<b>.</b><wbr>Simulation</span>
+    </h1>
+    <p class="bio">{{ s.bio }}</p>
+  </div>
+</section>
+
+<section id="reel" class="wrap reel" aria-label="{{ s.demo_reel.title }}">
+  <div class="video">
+    <iframe src="https://player.vimeo.com/video/{{ s.demo_reel.vimeo_id }}?h={{ s.demo_reel.vimeo_hash }}&byline=0&portrait=0&title=0"
+            title="{{ s.demo_reel.title }}" loading="lazy"
+            allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+  </div>
+  <ol class="breakdown">
+    {% for item in s.demo_reel.breakdown %}
+    <li>
+      <span class="time">{{ item.time }}</span>
+      <span class="name">{{ item.name }}</span>
+      <span class="detail">{{ item.detail }}</span>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+
+<section id="tools" class="tools">
+  <div class="wrap tools-inner">
+    <div class="tools-copy">
+      <p class="eyebrow">{{ s.tools_reel.eyebrow }}</p>
+      <h2>{{ s.tools_reel.title }}</h2>
+      <p>{{ s.tools_reel.text }}</p>
+    </div>
+    <div class="tools-media">
+      <div class="video">
+        <iframe src="https://player.vimeo.com/video/{{ s.tools_reel.vimeo_id }}?h={{ s.tools_reel.vimeo_hash }}&byline=0&portrait=0&title=0"
+                title="{{ s.tools_reel.eyebrow }}" loading="lazy"
+                allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+      </div>
+      <ul class="chapters">
+        {% for c in s.tools_reel.chapters %}<li>{{ c }}</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="contact" class="wrap contact">
+  <h2>{{ s.freelance.heading }}</h2>
+  <p>{{ s.freelance.text }}</p>
+  <div class="actions">
+    <a class="btn btn-primary" href="mailto:{{ s.email }}">{{ s.email }}</a>
+    <a class="btn" href="{{ s.resume | relative_url }}" target="_blank" rel="noopener">Download resume (PDF)</a>
+  </div>
+</section>

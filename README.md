@@ -1,27 +1,28 @@
-# Minimal Mistakes remote theme starter
+# danielmccrummen.com
 
-Click [**Use this template**](https://github.com/mmistakes/mm-github-pages-starter/generate) button above for the quickest method of getting started with the [Minimal Mistakes Jekyll theme](https://github.com/mmistakes/minimal-mistakes).
+One-page portfolio site for Daniel McCrummen, built with Jekyll and hosted on GitHub Pages.
 
-Contains basic configuration to get you a site with:
+## Updating content
 
-- Sample posts.
-- Sample top navigation.
-- Sample author sidebar with social links.
-- Sample footer links.
-- Paginated home page.
-- Archive pages for posts grouped by year, category, and tag.
-- Sample about page.
-- Sample 404 page.
-- Site wide search.
+Almost everything you'd change lives in **`_data/site.yml`**:
 
-Replace sample content with your own and [configure as necessary](https://mmistakes.github.io/minimal-mistakes/docs/configuration/).
+- **Bio, title, studio** — `role`, `studio`, `bio`
+- **Reels** — set `vimeo_id` and `vimeo_hash` (the `h=` value from Vimeo's embed link), then update the `breakdown` or `chapters` list
+- **Resume** — replace `assets/Daniel_McCrummen_Resume.pdf` (same filename) or point `resume` at a new file
+- **Links and email** — `links`, `email`
 
----
+Push to `master` and GitHub Pages rebuilds the site in a minute or two.
 
-## Troubleshooting
+## Files
 
-If you have a question about using Jekyll, start a discussion on the [Jekyll Forum](https://talk.jekyllrb.com/) or [StackOverflow](https://stackoverflow.com/questions/tagged/jekyll). Other resources:
+- `index.html` — the page layout
+- `_layouts/default.html` — header, footer and `<head>`
+- `assets/css/site.css` — all styling (colors are variables at the top)
+- `resume/` — keeps the old `/resume/` link working by redirecting to the PDF
 
-- [Ruby 101](https://jekyllrb.com/docs/ruby-101/)
-- [Setting up a Jekyll site with GitHub Pages](https://jekyllrb.com/docs/github-pages/)
-- [Configuring GitHub Metadata](https://github.com/jekyll/github-metadata/blob/master/docs/configuration.md#configuration) to work properly when developing locally and avoid `No GitHub API authentication could be found. Some fields may be missing or have incorrect data.` warnings.
+## Preview locally (optional)
+
+```
+bundle install
+bundle exec jekyll serve
+```
