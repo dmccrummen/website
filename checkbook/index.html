@@ -532,13 +532,29 @@ function toCSV(){
   }
   return lines.join('\n');
 }
+async function saveFile(){
+  const msg=$('#saveMsg'); const say=t=>{if(msg)msg.textContent=t};
+  const name=`checkbook-backup-${today()}.csv`;
+  let file; try{file=new File([toCSV()],name,{type:'text/csv'})}catch(e){say('This browser can’t make a file. Use Copy text instead.');return}
+  const mark=()=>{S.lastBackup=today();save()};
+  if(navigator.canShare&&navigator.share){
+    try{if(navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});mark();say('Saved. Choose “Save to Files” in the share menu to keep it on your phone.');return}}
+    catch(e){if(e&&e.name==='AbortError'){say('Save canceled.');return}}
+  }
+  try{
+    const url=URL.createObjectURL(file);const a=document.createElement('a');a.href=url;a.download=name;
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
+    mark();say(`Downloaded ${name}.`);
+  }catch(e){say('Couldn’t save a file here. Use Copy text instead.')}
+}
 function sheetBackup(){
   openSheet(`
     <h2>Backup &amp; import</h2>
-    <p>Your checkbook is saved on this device only. This backup holds all ${S.accounts.length} account${S.accounts.length>1?'s':''}. Copy it into Notes or an email now and then.</p>
+    <p>Your checkbook is saved on this device only. Save a backup file to iCloud Drive or your phone now and then. It holds all ${S.accounts.length} account${S.accounts.length>1?'s':''}. Copy it into Notes or an email now and then.</p>
     <div class="fields">
       <textarea class="csv field" id="csvOut" readonly>${esc(toCSV())}</textarea>
-      <div class="sheet-actions" style="margin-top:0"><button class="btn" data-act="copy">Copy backup</button></div>
+      <div class="msg" id="saveMsg">${S.lastBackup?'Last backup: '+longDate(S.lastBackup):'No backup saved yet.'}</div>
+      <div class="sheet-actions" style="margin-top:0"><button class="btn ghost" data-act="copy">Copy text</button><button class="btn" data-act="savefile">Save file</button></div>
     </div>
     <hr>
     <div class="lbl">Import</div>
@@ -684,7 +700,8 @@ document.addEventListener('click',e=>{
     case 'statement':sheetStatement();break;
     case 'dostatement':{const p=statementPlan();if(!p.remove.length)return;removeTxns(p.remove.map(t=>t.id),true,`New statement from ${longDate(p.d)}`,p.d);break}
     case 'backup':sheetBackup();break;
-    case 'copy':{const ta=$('#csvOut');const done=()=>{el.textContent='Copied'};
+    case 'savefile':saveFile();break;
+    case 'copy':{const ta=$('#csvOut');const done=()=>{el.textContent='Copied';S.lastBackup=today();save()};
       if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(ta.value).then(done).catch(()=>{ta.focus();ta.select();el.textContent='Text selected, tap Copy'})}else{ta.focus();ta.select()}break}
     case 'import':{const txt=$('#csvIn').value;if(!txt.trim()){$('#impMsg').textContent='Choose a file or paste CSV text first.';return}$('#impMsg').textContent=importCSV(txt,$('#impReplace').checked);break}
     case 'accounts':sheetAccounts();break;
