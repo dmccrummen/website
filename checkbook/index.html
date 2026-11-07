@@ -424,7 +424,7 @@ function sheetTxn(id){
   const opts=sel=>S.accounts.map(a=>`<option value="${a.id}"${a.id===sel?' selected':''}>${esc(a.name)}</option>`).join('');
   openSheet(`
     <h2>${t?'Edit transaction':'New transaction'}</h2>
-    <form id="txnForm" class="fields" data-id="${t?t.id:''}">
+    <form id="txnForm" class="fields" novalidate data-id="${t?t.id:''}">
       <div class="seg" id="seg"><button type="button" class="out${mode==='out'?' on':''}" data-act="seg" data-v="out">Payment</button><button type="button" class="in${mode==='in'?' on':''}" data-act="seg" data-v="in">Deposit</button><button type="button" class="xf${mode==='xf'?' on':''}" data-act="seg" data-v="xf">Transfer</button></div>
       <div id="xfBox" ${mode==='xf'?'':'hidden'}>
         ${S.accounts.length>1?`<div class="xf-row">
@@ -434,7 +434,7 @@ function sheetTxn(id){
         </div>`:`<p>Transfers need a second account. <button type="button" class="chip" data-act="accounts">Add an account</button></p>`}
       </div>
       <div class="two">
-        <div class="field"><label for="fAmt">Amount</label><input id="fAmt" class="num money" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0.00" value="${fmtMoneyInput(t?(Math.abs(t.amount)/100).toFixed(2):'')}" ${t?'':'autofocus'} required></div>
+        <div class="field"><label for="fAmt">Amount</label><input id="fAmt" class="num money" inputmode="numeric" autocomplete="off" placeholder="0.00" value="${fmtMoneyInput(t?(Math.abs(t.amount)/100).toFixed(2):'')}" ${t?'':'autofocus'} required></div>
         <div class="field"><label for="fDate">Date</label><input id="fDate" type="date" value="${t?t.date:today()}" required></div>
       </div>
       <div class="field"><label for="fRep">Repeat</label><select id="fRep"><option value="never">Never</option>${Object.entries(FREQ).map(([k,v])=>`<option value="${k}"${rule&&rule.freq===k?' selected':''}>${v}</option>`).join('')}</select>
@@ -501,9 +501,9 @@ function sheetRepeating(){
 function sheetRule(id){
   const r=(S.recurring||[]).find(x=>x.id===id); if(!r)return;
   openSheet(`<h2>${esc(ruleName(r))}</h2>
-    <form id="ruleForm" class="fields" data-id="${r.id}">
+    <form id="ruleForm" class="fields" novalidate data-id="${r.id}">
       <div class="two">
-        <div class="field"><label for="rAmt">Amount</label><input id="rAmt" class="num money" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0.00" value="${fmtMoneyInput((r.amount/100).toFixed(2))}"></div>
+        <div class="field"><label for="rAmt">Amount</label><input id="rAmt" class="num money" inputmode="numeric" autocomplete="off" placeholder="0.00" value="${fmtMoneyInput((r.amount/100).toFixed(2))}"></div>
         <div class="field"><label for="rNext">Next date</label><input id="rNext" type="date" value="${r.next}"></div>
       </div>
       <div class="field"><label for="rFreq">Repeat</label><select id="rFreq">${Object.entries(FREQ).map(([k,v])=>`<option value="${k}"${r.freq===k?' selected':''}>${v}</option>`).join('')}</select></div>
@@ -580,10 +580,10 @@ function sheetOpening(){
   openSheet(`
     <h2>Opening balance</h2>
     <p>What ${esc(a.name)} held on the day this register starts. Every running balance is counted from here.</p>
-    <form id="openForm" class="fields">
+    <form id="openForm" class="fields" novalidate>
       <div class="seg two-way" id="oSeg"><button type="button" class="in${owed?'':' on'}" data-act="oseg" data-v="in">Money in account</button><button type="button" class="out${owed?' on':''}" data-act="oseg" data-v="out">Money owed</button></div>
       <div class="two">
-        <div class="field"><label for="oAmt">Amount</label><input id="oAmt" class="num money" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0.00" value="${fmtMoneyInput((Math.abs(a.opening)/100).toFixed(2))}" autofocus></div>
+        <div class="field"><label for="oAmt">Amount</label><input id="oAmt" class="num money" inputmode="numeric" autocomplete="off" placeholder="0.00" value="${fmtMoneyInput((Math.abs(a.opening)/100).toFixed(2))}" autofocus></div>
         <div class="field"><label for="oDate">As of</label><input id="oDate" type="date" value="${a.openingDate}"></div>
       </div>
       <p>Use Money owed for a credit card balance.</p>
@@ -598,14 +598,14 @@ function sheetAccounts(){
     <div class="acct-list">${items}</div>
     <hr>
     <div class="lbl">Add an account</div>
-    <form id="addAcct" class="fields">
+    <form id="addAcct" class="fields" novalidate>
       <div class="two"><div class="field"><label for="naName">Name</label><input id="naName" placeholder="Savings" required></div>
-      <div class="field"><label for="naBal">Starting balance</label><input id="naBal" class="num money" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0.00"></div></div>
+      <div class="field"><label for="naBal">Starting balance</label><input id="naBal" class="num money" inputmode="numeric" autocomplete="off" placeholder="0.00"></div></div>
       <div class="sheet-actions" style="margin-top:0"><button class="btn" type="submit">Add account</button></div>
     </form>
     <hr>
     <div class="lbl">${esc(a.name)}</div>
-    <form id="renAcct" class="fields">
+    <form id="renAcct" class="fields" novalidate>
       <div class="field"><label for="raName">Rename</label><input id="raName" value="${esc(a.name)}" required></div>
       <button type="button" class="acct-item" data-act="opening"><span>Opening balance · ${longDate(a.openingDate)}</span><span class="num">${money(a.opening)}</span></button>
       <div class="sheet-actions" style="margin-top:0">
