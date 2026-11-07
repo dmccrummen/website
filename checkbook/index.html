@@ -116,7 +116,17 @@ button{cursor:pointer}
 .actbar{position:fixed;left:0;right:0;bottom:0;z-index:7;background:var(--surface);border-top:1px solid var(--line);
   padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
   display:flex;align-items:center;justify-content:space-between;gap:12px}
+.actbar{flex-wrap:wrap}
 .actbar .info{font-size:14px;min-width:0}
+.act-btns{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.btn.sm{padding:9px 12px;font-size:14px}
+.sugg{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);margin-top:4px}
+.sugg-item{display:flex;align-items:center;border-bottom:1px solid var(--line)}
+.sugg-item:last-child{border-bottom:0}
+.sugg-item .pick{flex:1;min-width:0;border:0;background:none;text-align:left;padding:10px 12px;display:flex;justify-content:space-between;gap:10px;font-size:15px}
+.sugg-item .pick span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sugg-item .pick small{color:var(--muted);font-size:12.5px;flex:none}
+.sugg-item .forget{border:0;background:none;color:var(--muted);width:40px;align-self:stretch;font-size:18px}
 .btn{border:0;border-radius:10px;padding:11px 16px;font-weight:600;font-size:15px;background:var(--accent);color:var(--accent-ink)}
 .btn.danger{background:var(--debit);color:var(--surface)}
 .btn.ghost{background:none;border:1px solid var(--line);color:var(--ink)}
@@ -231,6 +241,24 @@ function sampleState(){
   return {v:1,sample:true,seq,current:a,accounts:[{id:a,name:'Checking',opening:125000,openingDate:'2026-10-01'},{id:v,name:'Visa',opening:-42000,openingDate:'2026-10-01'}],txns:t};
 }
 function blankState(){const a=uid();return {v:1,sample:false,seq:0,current:a,accounts:[{id:a,name:'Checking',opening:0,openingDate:today()}],txns:[]}}
+function remember(t){
+  if(!t||t.xfer||!t.payee)return; S.payees=S.payees||{};
+  const k=t.payee.trim().toLowerCase(); if(!k)return;
+  const o=S.payees[k]; S.payees[k]={name:t.payee.trim(),cat:t.cat||(o&&o.cat)||'',out:t.amount<0,n:((o&&o.n)||0)+1,last:t.date>((o&&o.last)||'')?t.date:o.last};
+}
+function ensurePayees(){if(!S.payees){S.payees={};S.txns.slice().sort(byDate).forEach(remember)}}
+function payeeMatches(q){
+  q=q.trim().toLowerCase();
+  return Object.entries(S.payees||{}).filter(([k])=>k!==q&&(!q||k.includes(q)))
+    .sort((a,b)=>(q?(b[0].startsWith(q)-a[0].startsWith(q)):0)||b[1].n-a[1].n||(b[1].last>a[1].last?1:-1)).slice(0,6);
+}
+function showSugg(){
+  const box=$('#payeeSugg'),inp=$('#fPayee'); if(!box||!inp)return;
+  const m=payeeMatches(inp.value);
+  if(!m.length||document.activeElement!==inp){box.hidden=true;return}
+  box.innerHTML=m.map(([k,p])=>`<div class="sugg-item"><button type="button" class="pick" data-act="pickPayee" data-k="${esc(k)}"><span>${esc(p.name)}</span>${p.cat?`<small>${esc(p.cat)}</small>`:''}</button><button type="button" class="forget" data-act="forgetPayee" data-k="${esc(k)}" aria-label="Forget ${esc(p.name)}">×</button></div>`).join('');
+  box.hidden=false;
+}
 function load(){try{const r=localStorage.getItem(KEY);if(r){const p=JSON.parse(r);if(p&&p.accounts&&p.accounts.length){S=(p.sample&&!p.accounts.some(x=>x.id==='ex2'))?sampleState():p;return}}}catch(e){} S=sampleState()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 
@@ -306,7 +334,7 @@ function render(){
   if(bar)bar.remove(); if(fab)fab.remove();
   if(ui.select){
     const sum=[...ui.sel].reduce((s,id)=>{const t=S.txns.find(x=>x.id===id);return s+(t?t.amount:0)},0);
-    document.body.insertAdjacentHTML('beforeend',`<div class="actbar" id="actbar"><div class="info"><b>${ui.sel.size}</b> selected${ui.sel.size?` · <span class="num">${plain(sum)}</span>`:''}</div><button class="btn danger" data-act="askdelete" ${ui.sel.size?'':'disabled'}>Delete</button></div>`);
+    document.body.insertAdjacentHTML('beforeend',`<div class="actbar" id="actbar"><div class="info"><b>${ui.sel.size}</b> selected${ui.sel.size?` · <span class="num">${plain(sum)}</span>`:''}</div><div class="act-btns"><button class="btn ghost sm" data-act="markclr" data-v="1" ${ui.sel.size?'':'disabled'}>Mark cleared</button><button class="btn ghost sm" data-act="markclr" data-v="0" ${ui.sel.size?'':'disabled'}>Uncleared</button><button class="btn danger sm" data-act="askdelete" ${ui.sel.size?'':'disabled'}>Delete</button></div></div>`);
   }else{
     document.body.insertAdjacentHTML('beforeend',`<button class="fab" id="fab" data-act="add" aria-label="Add transaction">+</button>`);
   }
@@ -343,11 +371,10 @@ function sheetTxn(id){
         <div class="field"><label for="fDate">Date</label><input id="fDate" type="date" value="${t?t.date:today()}" required></div>
       </div>
       ${S.accounts.length>1?`<div class="field" id="acctBox" ${mode==='xf'?'hidden':''}><label for="fAcct">Account</label><select id="fAcct">${opts(t?t.acct:acct().id)}</select></div>`:''}
-      <div class="field" id="payeeBox" ${mode==='xf'?'hidden':''}><label for="fPayee">Payee</label><input id="fPayee" list="payees" value="${esc(t?t.payee:'')}" autocomplete="off"></div>
+      <div class="field" id="payeeBox" ${mode==='xf'?'hidden':''}><label for="fPayee">Payee</label><input id="fPayee" value="${esc(t?t.payee:'')}" autocomplete="off" autocapitalize="words"><div class="sugg" id="payeeSugg" hidden></div></div>
       <div class="field" id="catBox" ${mode==='xf'?'hidden':''}><label for="fCat">Category</label><input id="fCat" list="cats" value="${esc(t?t.cat:'')}" autocomplete="off"></div>
       <div class="field"><label for="fNote">Note</label><input id="fNote" value="${esc(t?t.note:'')}"></div>
       <label class="check"><input type="checkbox" id="fClr" ${t&&t.cleared?'checked':''}><span>Cleared<small id="clrNote">${mode==='xf'?'Applies to this account’s side. Each account clears on its own.':'It shows on your bank statement'}</small></span></label>
-      <datalist id="payees">${payees.map(p=>`<option value="${esc(p)}">`).join('')}</datalist>
       <datalist id="cats">${cats.map(p=>`<option value="${esc(p)}">`).join('')}</datalist>
       <div class="sheet-actions">
         ${t?'<button type="button" class="btn ghost" data-act="deleteOne" style="color:var(--debit)">Delete</button><span class="spacer"></span>':''}
@@ -385,6 +412,7 @@ function saveTxn(form){
     if(moved)ui.undo=JSON.stringify(S);
     const data={acct:target,date,note,cleared,payee:$('#fPayee').value.trim(),cat:$('#fCat').value.trim(),amount:mode==='out'?-amt:amt};
     if(t)Object.assign(t,data); else S.txns.push({id:uid(),seq:++S.seq,...data});
+    remember(data);
     if(moved){save();closeSheet();render();toast('Moved to '+acctName(target));return}
     if(!t&&target!==acct().id){save();closeSheet();render();ui.undo=null;toast('Added to '+acctName(target));return}
   }
@@ -520,7 +548,7 @@ function normDate(s){
   if(m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/)){let y=+m[3];if(y<100)y+=2000;return y+'-'+pad(m[1])+'-'+pad(m[2])}
   const d=new Date(s);return isNaN(d)?null:iso(d);
 }
-const toCents=s=>{s=String(s||'').trim();if(!s)return 0;const neg=/^\(.*\)$/.test(s)||/^-|−/.test(s);const n=parseFloat(s.replace(/[^0-9.]/g,''));return isNaN(n)?0:Math.round(n*100)*(neg?-1:1)};
+const toCents=s=>{s=String(s||'').trim();if(!s)return 0;const neg=/\(.*\d.*\)/.test(s)||/[-−–]\s*\$?\s*\d/.test(s)||/\d\s*[-−]$/.test(s)||/\bDR\b/i.test(s);const n=parseFloat(s.replace(/[^0-9.]/g,''));return isNaN(n)?0:Math.round(n*100)*(neg?-1:1)};
 function importCSV(text,replace){
   const rows=parseCSV(text); if(rows.length<2)return 'No rows found. The first line should be column names.';
   const h=rows[0].map(x=>x.trim().toLowerCase());
@@ -528,7 +556,7 @@ function importCSV(text,replace){
   const iAcc=h.findIndex(x=>x==='account'||x==='account name'||x==='acct');
   const iD=col('date'), iP=col('payee','description','name','title'), iA=col('amount');
   const iOut=col('withdrawal','debit','payment','expense'), iIn=col('deposit','credit','income');
-  const iC=col('category'), iClr=col('cleared','status','reconciled'), iN=col('note','memo'), iX=col('transfer id','transfer');
+  const iC=col('category'), iClr=col('cleared','status','reconciled'), iN=col('note','memo'), iX=col('transfer id'), iT=col('type','kind');
   if(iD<0||(iA<0&&iOut<0&&iIn<0))return 'Couldn’t find a date column and an amount column.';
   const before=JSON.stringify(S);
   if(replace)S={v:1,sample:false,seq:0,current:null,accounts:[],txns:[]};
@@ -544,7 +572,10 @@ function importCSV(text,replace){
   for(const r of rows.slice(1)){
     const date=normDate(r[iD]); if(!date)continue;
     const a=iAcc>=0?find(r[iAcc]):fallback();
-    const amt=iA>=0?toCents(r[iA]):(toCents(r[iIn])-Math.abs(toCents(r[iOut])));
+    let amt=iA>=0?toCents(r[iA]):(Math.abs(toCents(r[iIn]))-Math.abs(toCents(r[iOut])));
+    const tv=iT>=0?(r[iT]||'').trim().toLowerCase():'';
+    if(/expense|payment|withdraw|debit|spend|check|charge|purchase|outflow|bill/.test(tv))amt=-Math.abs(amt);
+    else if(/income|deposit|credit|refund|inflow|paycheck|salary/.test(tv))amt=Math.abs(amt);
     const payee=iP>=0?(r[iP]||'').trim():'';
     if(/^opening balance$/i.test(payee)){a.opening=amt;a.openingDate=date;continue}
     if(!amt)continue;
@@ -552,7 +583,7 @@ function importCSV(text,replace){
     const t={id:uid(),acct:a.id,seq:++S.seq,date,payee,amount:amt,cat:iC>=0?(r[iC]||'').trim():'',note:iN>=0?(r[iN]||'').trim():'',cleared:['yes','y','true','1','c','cleared','r','reconciled','x'].includes(cv)};
     const xl=iX>=0?(r[iX]||'').trim():'';
     if(xl){(links[xl]=links[xl]||[]).push(t)}
-    S.txns.push(t); added.push(t); n++;
+    S.txns.push(t); added.push(t); n++; remember(t);
   }
   // re-link transfer pairs
   for(const k in links){const g=links[k];
@@ -562,7 +593,8 @@ function importCSV(text,replace){
   if(!S.accounts.some(a=>a.id===S.current))S.current=S.accounts[0].id;
   ui.undo=before; S.sample=false; save(); render();
   const accts=new Set(added.map(t=>t.acct)).size;
-  let msg=`Imported ${n} transaction${n===1?'':'s'}${accts>1?` into ${accts} accounts`:''}.`;
+  let msg=`Imported ${n} transaction${n===1?'':'s'}${accts>1?` into ${accts} accounts`:''}: ${added.filter(t=>t.amount<0).length} payments, ${added.filter(t=>t.amount>0).length} deposits.`;
+  if(n>2&&added.every(t=>t.amount>0))msg+=' Every amount came in as a deposit, so this file may mark payments in a way I don’t recognize yet.';
   if(made.length&&!replace)msg+=` New account${made.length>1?'s':''}: ${made.join(', ')}.`;
   toast(replace?'Backup restored':'Import finished');
   return msg;
@@ -610,6 +642,15 @@ document.addEventListener('click',e=>{
     case 'selcleared':ui.sel.clear();txnsOf(a.id).filter(t=>t.cleared).forEach(t=>ui.sel.add(t.id));render();break;
     case 'selbefore':{const d=$('#beforeDate').value;if(!d)return;ui.sel.clear();txnsOf(a.id).filter(t=>t.date<d).forEach(t=>ui.sel.add(t.id));render();const b=$('#beforeDate');if(b)b.value=d;break}
     case 'askdelete':if(ui.sel.size)sheetDelete();break;
+    case 'markclr':{if(!ui.sel.size)return;const v=el.dataset.v==='1';ui.undo=JSON.stringify(S);let n=0;
+      for(const t of S.txns)if(ui.sel.has(t.id)){t.cleared=v;n++}
+      ui.sel.clear();ui.select=false;save();render();toast(`Marked ${n} ${v?'cleared':'not cleared'}`);break}
+    case 'pickPayee':{const p=S.payees[el.dataset.k];if(!p)return;$('#fPayee').value=p.name;
+      if(p.cat&&!$('#fCat').value.trim())$('#fCat').value=p.cat;
+      const form=$('#txnForm');const cur=$('#seg .on').dataset.v;
+      if(!form.dataset.id&&cur!=='xf'){const v=p.out?'out':'in';document.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on',b.dataset.v===v))}
+      $('#payeeSugg').hidden=true;break}
+    case 'forgetPayee':{delete S.payees[el.dataset.k];save();showSugg();break}
     case 'dodelete':{const n=ui.sel.size;removeTxns([...ui.sel],$('#keepBal').checked,`Deleted ${n} transaction${n>1?'s':''}`);break}
     case 'deleteOne':{const t=S.txns.find(x=>x.id=== $('#txnForm').dataset.id);removeTxns([t.id],false,'Deleted '+(label(t)||'transaction'));break}
     case 'statement':sheetStatement();break;
@@ -641,7 +682,10 @@ document.addEventListener('submit',e=>{
   if(f.id==='addAcct'){const name=$('#naName').value.trim();if(!name)return;const id=uid();S.accounts.push({id,name,opening:toCents($('#naBal').value),openingDate:today()});S.current=id;S.sample=false;save();closeSheet();render()}
   if(f.id==='renAcct'){const name=$('#raName').value.trim();if(!name)return;acct().name=name;save();closeSheet();render()}
 });
-document.addEventListener('input',e=>{if(e.target.id==='stDate'||e.target.id==='stCleared')statementPreview()});
+document.addEventListener('focusin',e=>{if(e.target.id==='fPayee')showSugg()});
+document.addEventListener('focusout',e=>{if(e.target.id==='fPayee')setTimeout(()=>{const b=$('#payeeSugg');if(b&&document.activeElement!==$('#fPayee'))b.hidden=true},200)});
+document.addEventListener('mousedown',e=>{if(e.target.closest('.sugg'))e.preventDefault()});
+document.addEventListener('input',e=>{if(e.target.id==='fPayee')showSugg();if(e.target.id==='stDate'||e.target.id==='stCleared')statementPreview()});
 document.addEventListener('change',e=>{
   if(e.target.id==='stCleared')statementPreview();
   if(e.target.id==='stripeToggle'){ui.stripes=e.target.checked;try{localStorage.setItem(TKEY+'-stripes',ui.stripes?'on':'off')}catch(err){}render()}
@@ -686,7 +730,7 @@ document.addEventListener('pointerup',endSwipe);
 document.addEventListener('pointercancel',e=>{const r=swipe.el;if(r&&e.pointerId===swipe.id){r.classList.remove('dragging');if(swipe.open!==r)r.style.transform='';swipe.el=null}});
 document.addEventListener('scroll',closeSwipe,{passive:true});
 
-loadTheme(); load(); render();
+loadTheme(); load(); ensurePayees(); render();
 })();
 </script>
 </body>
