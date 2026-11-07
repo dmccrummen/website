@@ -288,6 +288,10 @@ function syncRule(t,freq,f){
   if(r){const changed=r.freq!==freq;Object.assign(r,fields);if(changed){r.next=addPeriod(t.date,freq,r.day);while(r.next<=t.date)r.next=addPeriod(r.next,freq,r.day)}}
   else{const day=+t.date.slice(8);r={id:uid(),...fields,day,next:addPeriod(t.date,freq,day)};S.recurring.push(r);t.rule=r.id;const p=partnerOf(t);if(p)p.rule=r.id}
 }
+/* money fields fill from the right like a register: 1-2-3-4 → 12.34 */
+function fmtDigits(d){d=String(d).replace(/\D/g,'').replace(/^0+/,'');if(!d)return '';const n=d.padStart(3,'0');return (+n.slice(0,-2)).toLocaleString('en-US')+'.'+n.slice(-2)}
+function fmtMoneyInput(v){if(v===''||v==null)return '';const c=Math.round(Math.abs(parseFloat(v))*100);return c?fmtDigits(String(c)):''}
+function caretEnd(el){const n=el.value.length;try{el.setSelectionRange(n,n)}catch(e){}}
 function remember(t){
   if(!t||t.xfer||!t.payee)return; S.payees=S.payees||{};
   const k=t.payee.trim().toLowerCase(); if(!k)return;
@@ -430,7 +434,7 @@ function sheetTxn(id){
         </div>`:`<p>Transfers need a second account. <button type="button" class="chip" data-act="accounts">Add an account</button></p>`}
       </div>
       <div class="two">
-        <div class="field"><label for="fAmt">Amount</label><input id="fAmt" class="num" inputmode="decimal" placeholder="0.00" value="${t?(Math.abs(t.amount)/100).toFixed(2):''}" ${t?'':'autofocus'} required></div>
+        <div class="field"><label for="fAmt">Amount</label><input id="fAmt" class="num money" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0.00" value="${fmtMoneyInput(t?(Math.abs(t.amount)/100).toFixed(2):'')}" ${t?'':'autofocus'} required></div>
         <div class="field"><label for="fDate">Date</label><input id="fDate" type="date" value="${t?t.date:today()}" required></div>
       </div>
       <div class="field"><label for="fRep">Repeat</label><select id="fRep"><option value="never">Never</option>${Object.entries(FREQ).map(([k,v])=>`<option value="${k}"${rule&&rule.freq===k?' selected':''}>${v}</option>`).join('')}</select>
@@ -499,7 +503,7 @@ function sheetRule(id){
   openSheet(`<h2>${esc(ruleName(r))}</h2>
     <form id="ruleForm" class="fields" data-id="${r.id}">
       <div class="two">
-        <div class="field"><label for="rAmt">Amount</label><input id="rAmt" class="num" inputmode="decimal" value="${(r.amount/100).toFixed(2)}"></div>
+        <div class="field"><label for="rAmt">Amount</label><input id="rAmt" class="num money" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0.00" value="${fmtMoneyInput((r.amount/100).toFixed(2))}"></div>
         <div class="field"><label for="rNext">Next date</label><input id="rNext" type="date" value="${r.next}"></div>
       </div>
       <div class="field"><label for="rFreq">Repeat</label><select id="rFreq">${Object.entries(FREQ).map(([k,v])=>`<option value="${k}"${r.freq===k?' selected':''}>${v}</option>`).join('')}</select></div>
@@ -579,7 +583,7 @@ function sheetOpening(){
     <form id="openForm" class="fields">
       <div class="seg two-way" id="oSeg"><button type="button" class="in${owed?'':' on'}" data-act="oseg" data-v="in">Money in account</button><button type="button" class="out${owed?' on':''}" data-act="oseg" data-v="out">Money owed</button></div>
       <div class="two">
-        <div class="field"><label for="oAmt">Amount</label><input id="oAmt" class="num" inputmode="decimal" value="${(Math.abs(a.opening)/100).toFixed(2)}" autofocus></div>
+        <div class="field"><label for="oAmt">Amount</label><input id="oAmt" class="num money" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0.00" value="${fmtMoneyInput((Math.abs(a.opening)/100).toFixed(2))}" autofocus></div>
         <div class="field"><label for="oDate">As of</label><input id="oDate" type="date" value="${a.openingDate}"></div>
       </div>
       <p>Use Money owed for a credit card balance.</p>
@@ -596,7 +600,7 @@ function sheetAccounts(){
     <div class="lbl">Add an account</div>
     <form id="addAcct" class="fields">
       <div class="two"><div class="field"><label for="naName">Name</label><input id="naName" placeholder="Savings" required></div>
-      <div class="field"><label for="naBal">Starting balance</label><input id="naBal" class="num" inputmode="decimal" placeholder="0.00"></div></div>
+      <div class="field"><label for="naBal">Starting balance</label><input id="naBal" class="num money" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0.00"></div></div>
       <div class="sheet-actions" style="margin-top:0"><button class="btn" type="submit">Add account</button></div>
     </form>
     <hr>
@@ -863,7 +867,18 @@ document.addEventListener('submit',e=>{
 document.addEventListener('focusin',e=>{if(e.target.id==='fPayee')showSugg()});
 document.addEventListener('focusout',e=>{if(e.target.id==='fPayee')setTimeout(()=>{const b=$('#payeeSugg');if(b&&document.activeElement!==$('#fPayee'))b.hidden=true},200)});
 document.addEventListener('mousedown',e=>{if(e.target.closest('.sugg'))e.preventDefault()});
-document.addEventListener('input',e=>{if(e.target.id==='fPayee')showSugg();if(e.target.id==='stDate'||e.target.id==='stCleared')statementPreview()});
+document.addEventListener('beforeinput',e=>{
+  const el=e.target; if(!el.classList||!el.classList.contains('money'))return;
+  if(e.inputType==='insertFromPaste'||e.inputType==='insertReplacementText'){
+    const txt=e.data||(e.dataTransfer&&e.dataTransfer.getData('text'))||'';
+    if(/\d\.\d/.test(txt)){e.preventDefault();el.value=fmtMoneyInput(txt.replace(/[^0-9.]/g,''));caretEnd(el)}
+  }
+});
+document.addEventListener('focusin',e=>{if(e.target.classList&&e.target.classList.contains('money'))setTimeout(()=>caretEnd(e.target),0)});
+document.addEventListener('click',e=>{if(e.target.classList&&e.target.classList.contains('money'))caretEnd(e.target)},true);
+document.addEventListener('input',e=>{
+  if(e.target.classList&&e.target.classList.contains('money')){const el=e.target;el.value=fmtDigits(el.value);el.style.borderColor='';caretEnd(el);return}
+  if(e.target.id==='fPayee')showSugg();if(e.target.id==='stDate'||e.target.id==='stCleared')statementPreview()});
 document.addEventListener('change',e=>{
   if(e.target.id==='stCleared')statementPreview();
   if(e.target.id==='stripeToggle'){ui.stripes=e.target.checked;try{localStorage.setItem(TKEY+'-stripes',ui.stripes?'on':'off')}catch(err){}render()}
