@@ -546,7 +546,9 @@ function normDate(s){
   s=(s||'').trim(); let m;
   if(m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/))return m[1]+'-'+pad(m[2])+'-'+pad(m[3]);
   if(m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/)){let y=+m[3];if(y<100)y+=2000;return y+'-'+pad(m[1])+'-'+pad(m[2])}
-  const d=new Date(s);return isNaN(d)?null:iso(d);
+  if(m=s.match(/^([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s+(\d{4})/)){const mi=MONTHS.findIndex(x=>x.slice(0,3).toLowerCase()===m[1].slice(0,3).toLowerCase());if(mi>=0)return m[3]+'-'+pad(mi+1)+'-'+pad(m[2])}
+  if(m=s.match(/^(\d{1,2})\s+([A-Za-z]{3,9})\.?,?\s+(\d{4})/)){const mi=MONTHS.findIndex(x=>x.slice(0,3).toLowerCase()===m[2].slice(0,3).toLowerCase());if(mi>=0)return m[3]+'-'+pad(mi+1)+'-'+pad(m[1])}
+  const d=new Date(s.replace(/\s+at\s+/i,' '));return isNaN(d)?null:iso(d);
 }
 const toCents=s=>{s=String(s||'').trim();if(!s)return 0;const neg=/\(.*\d.*\)/.test(s)||/[-−–]\s*\$?\s*\d/.test(s)||/\d\s*[-−]$/.test(s)||/\bDR\b/i.test(s);const n=parseFloat(s.replace(/[^0-9.]/g,''));return isNaN(n)?0:Math.round(n*100)*(neg?-1:1)};
 function importCSV(text,replace){
@@ -556,7 +558,7 @@ function importCSV(text,replace){
   const iAcc=h.findIndex(x=>x==='account'||x==='account name'||x==='acct');
   const iD=col('date'), iP=col('payee','description','name','title'), iA=col('amount');
   const iOut=col('withdrawal','debit','payment','expense'), iIn=col('deposit','credit','income');
-  const iC=col('category'), iClr=col('cleared','status','reconciled'), iN=col('note','memo'), iX=col('transfer id'), iT=col('type','kind');
+  const iC=col('category'), iClr=col('cleared','clear','status','reconciled'), iN=col('note','memo'), iX=col('transfer id'), iT=col('type','kind'), iK=col('checknum','check num','check #','check no','check number');
   if(iD<0||(iA<0&&iOut<0&&iIn<0))return 'Couldn’t find a date column and an amount column.';
   const before=JSON.stringify(S);
   if(replace)S={v:1,sample:false,seq:0,current:null,accounts:[],txns:[]};
@@ -569,7 +571,10 @@ function importCSV(text,replace){
   };
   const fallback=()=>replace?find('Checking'):acct();
   const links={}, added=[]; let n=0;
-  for(const r of rows.slice(1)){
+  let body=rows.slice(1);
+  const ds=body.map(r=>normDate(r[iD])).filter(Boolean);
+  if(ds.length>1&&ds[0]>ds[ds.length-1])body=body.reverse(); // newest-first file: add oldest first so same-day order is kept
+  for(const r of body){
     const date=normDate(r[iD]); if(!date)continue;
     const a=iAcc>=0?find(r[iAcc]):fallback();
     let amt=iA>=0?toCents(r[iA]):(Math.abs(toCents(r[iIn]))-Math.abs(toCents(r[iOut])));
@@ -577,10 +582,13 @@ function importCSV(text,replace){
     if(/expense|payment|withdraw|debit|spend|check|charge|purchase|outflow|bill/.test(tv))amt=-Math.abs(amt);
     else if(/income|deposit|credit|refund|inflow|paycheck|salary/.test(tv))amt=Math.abs(amt);
     const payee=iP>=0?(r[iP]||'').trim():'';
-    if(/^opening balance$/i.test(payee)){a.opening=amt;a.openingDate=date;continue}
+    if(/^(opening|initial|starting|beginning) balance$/i.test(payee)){a.opening=amt;a.openingDate=date;continue}
+    let cat=iC>=0?(r[iC]||'').trim():''; if(/^(none|uncategorized|-)$/i.test(cat))cat='';
+    const chk=iK>=0?(r[iK]||'').trim():'';
+    let note=iN>=0?(r[iN]||'').trim():''; if(chk)note=('Check #'+chk+(note?' · '+note:''));
     if(!amt)continue;
     const cv=iClr>=0?(r[iClr]||'').trim().toLowerCase():'';
-    const t={id:uid(),acct:a.id,seq:++S.seq,date,payee,amount:amt,cat:iC>=0?(r[iC]||'').trim():'',note:iN>=0?(r[iN]||'').trim():'',cleared:['yes','y','true','1','c','cleared','r','reconciled','x'].includes(cv)};
+    const t={id:uid(),acct:a.id,seq:++S.seq,date,payee,amount:amt,cat,note,cleared:['yes','y','true','1','c','cleared','r','reconciled','x'].includes(cv)};
     const xl=iX>=0?(r[iX]||'').trim():'';
     if(xl){(links[xl]=links[xl]||[]).push(t)}
     S.txns.push(t); added.push(t); n++; remember(t);
@@ -590,6 +598,7 @@ function importCSV(text,replace){
     if(g.length===2&&g[0].acct!==g[1].acct){const link=uid();
       g[0].xfer={link,other:g[1].acct};g[1].xfer={link,other:g[0].acct};g.forEach(t=>{t.payee='';t.cat=t.cat||'Transfer'})}}
   if(!n&&!S.accounts.length){S=JSON.parse(before);return 'No transactions could be read from that file.'}
+  for(const name of made){const a=S.accounts.find(x=>x.name===name);const first=S.txns.filter(t=>t.acct===a.id).reduce((m,t)=>t.date<m?t.date:m,a.openingDate);if(first<a.openingDate)a.openingDate=first}
   if(!S.accounts.some(a=>a.id===S.current))S.current=S.accounts[0].id;
   ui.undo=before; S.sample=false; save(); render();
   const accts=new Set(added.map(t=>t.acct)).size;
