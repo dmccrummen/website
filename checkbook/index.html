@@ -342,6 +342,7 @@ function sheetTxn(id){
         <div class="field"><label for="fAmt">Amount</label><input id="fAmt" class="num" inputmode="decimal" placeholder="0.00" value="${t?(Math.abs(t.amount)/100).toFixed(2):''}" ${t?'':'autofocus'} required></div>
         <div class="field"><label for="fDate">Date</label><input id="fDate" type="date" value="${t?t.date:today()}" required></div>
       </div>
+      ${S.accounts.length>1?`<div class="field" id="acctBox" ${mode==='xf'?'hidden':''}><label for="fAcct">Account</label><select id="fAcct">${opts(t?t.acct:acct().id)}</select></div>`:''}
       <div class="field" id="payeeBox" ${mode==='xf'?'hidden':''}><label for="fPayee">Payee</label><input id="fPayee" list="payees" value="${esc(t?t.payee:'')}" autocomplete="off"></div>
       <div class="field" id="catBox" ${mode==='xf'?'hidden':''}><label for="fCat">Category</label><input id="fCat" list="cats" value="${esc(t?t.cat:'')}" autocomplete="off"></div>
       <div class="field"><label for="fNote">Note</label><input id="fNote" value="${esc(t?t.note:'')}"></div>
@@ -379,8 +380,13 @@ function saveTxn(form){
     t.cleared=cleared;
   }else{
     if(t&&t.xfer){const p=partnerOf(t);if(p)S.txns=S.txns.filter(x=>x!==p);delete t.xfer}
-    const data={date,note,cleared,payee:$('#fPayee').value.trim(),cat:$('#fCat').value.trim(),amount:mode==='out'?-amt:amt};
-    if(t)Object.assign(t,data); else S.txns.push({id:uid(),acct:acct().id,seq:++S.seq,...data});
+    const target=$('#fAcct')?$('#fAcct').value:(t?t.acct:acct().id);
+    const moved=t&&t.acct!==target;
+    if(moved)ui.undo=JSON.stringify(S);
+    const data={acct:target,date,note,cleared,payee:$('#fPayee').value.trim(),cat:$('#fCat').value.trim(),amount:mode==='out'?-amt:amt};
+    if(t)Object.assign(t,data); else S.txns.push({id:uid(),seq:++S.seq,...data});
+    if(moved){save();closeSheet();render();toast('Moved to '+acctName(target));return}
+    if(!t&&target!==acct().id){save();closeSheet();render();ui.undo=null;toast('Added to '+acctName(target));return}
   }
   save();closeSheet();render();
 }
@@ -471,25 +477,29 @@ function sheetAccounts(){
 }
 
 function toCSV(){
-  const a=acct(); const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
-  const lines=['Date,Payee,Amount,Category,Cleared,Note',`${a.openingDate},Opening balance,${(a.opening/100).toFixed(2)},,Yes,`];
-  for(const t of txnsOf(a.id))lines.push([t.date,label(t),(t.amount/100).toFixed(2),t.cat,t.cleared?'Yes':'No',t.note].map(q).join(','));
+  const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  const lines=['Account,Date,Payee,Amount,Category,Cleared,Note,Transfer ID'];
+  for(const a of S.accounts){
+    lines.push([a.name,a.openingDate,'Opening balance',(a.opening/100).toFixed(2),'','Yes','',''].map(q).join(','));
+    for(const t of txnsOf(a.id))lines.push([a.name,t.date,label(t),(t.amount/100).toFixed(2),t.cat,t.cleared?'Yes':'No',t.note,t.xfer?t.xfer.link:''].map(q).join(','));
+  }
   return lines.join('\n');
 }
 function sheetBackup(){
   openSheet(`
     <h2>Backup &amp; import</h2>
-    <p>Your checkbook is saved on this device only. Copy this backup into Notes or an email now and then.</p>
+    <p>Your checkbook is saved on this device only. This backup holds all ${S.accounts.length} account${S.accounts.length>1?'s':''}. Copy it into Notes or an email now and then.</p>
     <div class="fields">
       <textarea class="csv field" id="csvOut" readonly>${esc(toCSV())}</textarea>
       <div class="sheet-actions" style="margin-top:0"><button class="btn" data-act="copy">Copy backup</button></div>
     </div>
     <hr>
-    <div class="lbl">Import into ${esc(acct().name)}</div>
-    <p>Choose a CSV file (like an export from your old Checkbook app) or paste CSV text. Columns for date, payee and amount are found by name.</p>
+    <div class="lbl">Import</div>
+    <p>Choose a CSV file or paste CSV text. Rows go to the account named in an Account column, and new accounts are created as needed. A file with no Account column goes into ${esc(acct().name)}.</p>
     <div class="fields">
       <input type="file" id="csvFile" accept=".csv,text/csv,text/plain">
       <textarea class="csv" id="csvIn" placeholder="Date,Payee,Amount,Category,Cleared,Note"></textarea>
+      <label class="check"><input type="checkbox" id="impReplace"><span>Replace everything<small>Use this to restore a backup. All current accounts and entries are replaced.</small></span></label>
       <div class="msg" id="impMsg"></div>
       <div class="sheet-actions" style="margin-top:0"><button class="btn ghost" data-act="close">Close</button><button class="btn" data-act="import">Import</button></div>
     </div>`,'backup');
@@ -511,28 +521,51 @@ function normDate(s){
   const d=new Date(s);return isNaN(d)?null:iso(d);
 }
 const toCents=s=>{s=String(s||'').trim();if(!s)return 0;const neg=/^\(.*\)$/.test(s)||/^-|−/.test(s);const n=parseFloat(s.replace(/[^0-9.]/g,''));return isNaN(n)?0:Math.round(n*100)*(neg?-1:1)};
-function importCSV(text){
+function importCSV(text,replace){
   const rows=parseCSV(text); if(rows.length<2)return 'No rows found. The first line should be column names.';
   const h=rows[0].map(x=>x.trim().toLowerCase());
-  const col=(...names)=>h.findIndex(x=>names.some(n=>x===n||x.includes(n)));
-  const iD=col('date'), iP=col('payee','description','name','title'), iA=h.findIndex(x=>x==='amount'||x.includes('amount'));
+  const col=(...names)=>h.findIndex(x=>!x.includes('account')&&names.some(n=>x===n||x.includes(n)));
+  const iAcc=h.findIndex(x=>x==='account'||x==='account name'||x==='acct');
+  const iD=col('date'), iP=col('payee','description','name','title'), iA=col('amount');
   const iOut=col('withdrawal','debit','payment','expense'), iIn=col('deposit','credit','income');
-  const iC=col('category'), iClr=col('cleared','status','reconciled'), iN=col('note','memo');
+  const iC=col('category'), iClr=col('cleared','status','reconciled'), iN=col('note','memo'), iX=col('transfer id','transfer');
   if(iD<0||(iA<0&&iOut<0&&iIn<0))return 'Couldn’t find a date column and an amount column.';
-  const a=acct(); let n=0;
+  const before=JSON.stringify(S);
+  if(replace)S={v:1,sample:false,seq:0,current:null,accounts:[],txns:[]};
+  const made=[];
+  const find=name=>{
+    name=(name||'').trim()||'Checking';
+    let a=S.accounts.find(x=>x.name.toLowerCase()===name.toLowerCase());
+    if(!a){a={id:uid(),name,opening:0,openingDate:today()};S.accounts.push(a);made.push(name)}
+    return a;
+  };
+  const fallback=()=>replace?find('Checking'):acct();
+  const links={}, added=[]; let n=0;
   for(const r of rows.slice(1)){
     const date=normDate(r[iD]); if(!date)continue;
-    let amt=iA>=0?toCents(r[iA]):(toCents(r[iIn])-Math.abs(toCents(r[iOut])));
+    const a=iAcc>=0?find(r[iAcc]):fallback();
+    const amt=iA>=0?toCents(r[iA]):(toCents(r[iIn])-Math.abs(toCents(r[iOut])));
     const payee=iP>=0?(r[iP]||'').trim():'';
-    if(/^opening balance$/i.test(payee))continue;
+    if(/^opening balance$/i.test(payee)){a.opening=amt;a.openingDate=date;continue}
     if(!amt)continue;
     const cv=iClr>=0?(r[iClr]||'').trim().toLowerCase():'';
-    S.txns.push({id:uid(),acct:a.id,seq:++S.seq,date,payee,amount:amt,cat:iC>=0?(r[iC]||'').trim():'',note:iN>=0?(r[iN]||'').trim():'',cleared:['yes','y','true','1','c','cleared','r','reconciled','x'].includes(cv)});
-    n++;
+    const t={id:uid(),acct:a.id,seq:++S.seq,date,payee,amount:amt,cat:iC>=0?(r[iC]||'').trim():'',note:iN>=0?(r[iN]||'').trim():'',cleared:['yes','y','true','1','c','cleared','r','reconciled','x'].includes(cv)};
+    const xl=iX>=0?(r[iX]||'').trim():'';
+    if(xl){(links[xl]=links[xl]||[]).push(t)}
+    S.txns.push(t); added.push(t); n++;
   }
-  if(!n)return 'No transactions could be read from that file.';
-  S.sample=false; save(); render();
-  return `Imported ${n} transaction${n>1?'s':''}. Set the opening balance under Accounts if needed.`;
+  // re-link transfer pairs
+  for(const k in links){const g=links[k];
+    if(g.length===2&&g[0].acct!==g[1].acct){const link=uid();
+      g[0].xfer={link,other:g[1].acct};g[1].xfer={link,other:g[0].acct};g.forEach(t=>{t.payee='';t.cat=t.cat||'Transfer'})}}
+  if(!n&&!S.accounts.length){S=JSON.parse(before);return 'No transactions could be read from that file.'}
+  if(!S.accounts.some(a=>a.id===S.current))S.current=S.accounts[0].id;
+  ui.undo=before; S.sample=false; save(); render();
+  const accts=new Set(added.map(t=>t.acct)).size;
+  let msg=`Imported ${n} transaction${n===1?'':'s'}${accts>1?` into ${accts} accounts`:''}.`;
+  if(made.length&&!replace)msg+=` New account${made.length>1?'s':''}: ${made.join(', ')}.`;
+  toast(replace?'Backup restored':'Import finished');
+  return msg;
 }
 
 const THEMES=[
@@ -584,12 +617,12 @@ document.addEventListener('click',e=>{
     case 'backup':sheetBackup();break;
     case 'copy':{const ta=$('#csvOut');const done=()=>{el.textContent='Copied'};
       if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(ta.value).then(done).catch(()=>{ta.focus();ta.select();el.textContent='Text selected, tap Copy'})}else{ta.focus();ta.select()}break}
-    case 'import':{const txt=$('#csvIn').value;if(!txt.trim()){$('#impMsg').textContent='Choose a file or paste CSV text first.';return}$('#impMsg').textContent=importCSV(txt);break}
+    case 'import':{const txt=$('#csvIn').value;if(!txt.trim()){$('#impMsg').textContent='Choose a file or paste CSV text first.';return}$('#impMsg').textContent=importCSV(txt,$('#impReplace').checked);break}
     case 'accounts':sheetAccounts();break;
     case 'pick':S.current=id;ui.sel.clear();save();closeSheet();render();break;
     case 'delAcct':{if(el.dataset.armed){S.txns=S.txns.filter(t=>t.acct!==a.id);S.accounts=S.accounts.filter(x=>x.id!==a.id);S.current=S.accounts[0].id;save();closeSheet();render()}else{el.dataset.armed='1';el.textContent='Tap again to delete'}break}
     case 'seg':{const v=el.dataset.v;document.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-      $('#xfBox').hidden=v!=='xf';$('#payeeBox').hidden=v==='xf';$('#catBox').hidden=v==='xf';
+      $('#xfBox').hidden=v!=='xf';$('#payeeBox').hidden=v==='xf';if($('#acctBox'))$('#acctBox').hidden=v==='xf';$('#catBox').hidden=v==='xf';
       $('#clrNote').textContent=v==='xf'?'Applies to this account’s side. Each account clears on its own.':'It shows on your bank statement';break}
     case 'themes':sheetThemes();break;
     case 'pickTheme':applyTheme(id);try{localStorage.setItem(TKEY,id)}catch(err){}sheetThemes();break;
