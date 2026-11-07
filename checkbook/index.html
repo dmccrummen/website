@@ -119,6 +119,14 @@ button{cursor:pointer}
   padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
   display:flex;align-items:center;justify-content:space-between;gap:12px}
 .actbar{flex-wrap:wrap}
+.upcoming{margin:12px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));display:grid;gap:6px}
+.up-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:8px 8px 8px 12px;font-size:14px}
+.up-item .when{font-family:var(--f-num);font-size:12px;color:var(--muted);white-space:nowrap}
+.up-item .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip.sm{padding:5px 10px;font-size:13px}
+.hint{font-size:12.5px;color:var(--muted)}
+.rep-tag{font-size:11px;color:var(--muted);margin-left:4px}
+.banner .acts{display:flex;gap:8px}
 .actbar .info{font-size:14px;min-width:0}
 .act-btns{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
 .btn.sm{padding:9px 12px;font-size:14px}
@@ -241,9 +249,41 @@ function sampleState(){
   xfer('2026-10-29',300,true,'Card payment');
   xfer('2026-11-01',400,false,'November card budget');
   addV('2026-11-03','Target',-52.10,'Shopping',false);
-  return {v:1,sample:true,seq,current:a,accounts:[{id:a,name:'Checking',opening:125000,openingDate:'2026-10-01'},{id:v,name:'Visa',opening:-42000,openingDate:'2026-10-01'}],txns:t};
+  const rRent='exr1',rNet='exr2';
+  t.filter(x=>x.payee==='Rent').forEach(x=>x.rule=rRent); t.filter(x=>x.payee==='Netflix').forEach(x=>x.rule=rNet);
+  var recurring=[{id:rRent,kind:'out',acct:a,to:'',amount:115000,payee:'Rent',cat:'Housing',note:'',freq:'monthly',day:2,next:'2026-12-02'},
+    {id:rNet,kind:'out',acct:a,to:'',amount:1549,payee:'Netflix',cat:'Subscriptions',note:'',freq:'monthly',day:5,next:'2026-12-05'}];
+  return {v:1,sample:true,seq,current:a,accounts:[{id:a,name:'Checking',opening:125000,openingDate:'2026-10-01'},{id:v,name:'Visa',opening:-42000,openingDate:'2026-10-01'}],txns:t,recurring};
 }
 function blankState(){const a=uid();return {v:1,sample:false,seq:0,current:a,accounts:[{id:a,name:'Checking',opening:0,openingDate:today()}],txns:[]}}
+const FREQ={weekly:'Weekly',biweekly:'Every 2 weeks',monthly:'Monthly',quarterly:'Every 3 months',yearly:'Yearly'};
+function addPeriod(d,f,day){
+  const[y,m,dd]=d.split('-').map(Number);
+  if(f==='weekly'||f==='biweekly')return new Date(Date.UTC(y,m-1,dd+(f==='weekly'?7:14))).toISOString().slice(0,10);
+  const k={monthly:1,quarterly:3,yearly:12}[f]||1; let mm=m-1+k; const yy=y+Math.floor(mm/12); mm%=12;
+  const last=new Date(Date.UTC(yy,mm+1,0)).getUTCDate(); return yy+'-'+pad(mm+1)+'-'+pad(Math.min(day||dd,last));
+}
+const ruleOf=t=>t&&t.rule?(S.recurring||[]).find(r=>r.id===t.rule):null;
+const ruleName=r=>r.kind==='xf'?'Transfer to '+acctName(r.to):(r.payee||'No payee');
+function postRule(r,date){
+  if(r.kind==='xf'){const link=uid();
+    S.txns.push({id:uid(),acct:r.acct,seq:++S.seq,date,payee:'',amount:-r.amount,cat:'Transfer',cleared:false,note:r.note||'',xfer:{link,other:r.to},rule:r.id});
+    S.txns.push({id:uid(),acct:r.to,seq:++S.seq,date,payee:'',amount:r.amount,cat:'Transfer',cleared:false,note:r.note||'',xfer:{link,other:r.acct},rule:r.id});
+  }else{const t={id:uid(),acct:r.acct,seq:++S.seq,date,payee:r.payee||'',amount:r.kind==='out'?-r.amount:r.amount,cat:r.cat||'',cleared:false,note:r.note||'',rule:r.id};S.txns.push(t);remember(t)}
+}
+function generateDue(){
+  S.recurring=(S.recurring||[]).filter(r=>S.accounts.some(a=>a.id===r.acct)&&(r.kind!=='xf'||S.accounts.some(a=>a.id===r.to)));
+  let n=0; const td=today();
+  for(const r of S.recurring){let g=0;while(r.next<=td&&g++<500){postRule(r,r.next);r.next=addPeriod(r.next,r.freq,r.day);n++}}
+  return n;
+}
+function syncRule(t,freq,f){
+  S.recurring=S.recurring||[]; let r=ruleOf(t);
+  if(freq==='never'){if(r)S.recurring=S.recurring.filter(x=>x!==r);return}
+  const fields={kind:f.mode,acct:f.mode==='xf'?f.from:t.acct,to:f.mode==='xf'?f.to:'',amount:f.amt,payee:f.mode==='xf'?'':f.payee,cat:f.mode==='xf'?'Transfer':f.cat,note:f.note,freq};
+  if(r){const changed=r.freq!==freq;Object.assign(r,fields);if(changed){r.next=addPeriod(t.date,freq,r.day);while(r.next<=t.date)r.next=addPeriod(r.next,freq,r.day)}}
+  else{const day=+t.date.slice(8);r={id:uid(),...fields,day,next:addPeriod(t.date,freq,day)};S.recurring.push(r);t.rule=r.id;const p=partnerOf(t);if(p)p.rule=r.id}
+}
 function remember(t){
   if(!t||t.xfer||!t.payee)return; S.payees=S.payees||{};
   const k=t.payee.trim().toLowerCase(); if(!k)return;
@@ -295,7 +335,7 @@ function render(){
     rows+=`<div class="sw${last?' last':''}"><button class="sw-del" data-act="swdel" data-id="${t.id}" tabindex="-1">Delete</button><div class="row${(idx++)%2?' alt':''}${ui.sel.has(t.id)?' is-sel':''}" role="button" tabindex="0" data-act="row" data-id="${t.id}">
       <div class="box"><span></span></div>
       <div class="d"><span class="mon">${MON[+mm-1]}</span><span class="day">${dd}</span></div>
-      <div class="main"><div class="payee">${t.xfer?'<span class="xf-tag">⇄</span>':''}${esc(name)||'<span style="color:var(--muted)">No payee</span>'}</div>${meta?`<div class="meta">${meta}</div>`:''}</div>
+      <div class="main"><div class="payee">${t.xfer?'<span class="xf-tag">⇄</span>':''}${esc(name)||'<span style="color:var(--muted)">No payee</span>'}${t.rule&&(S.recurring||[]).some(r=>r.id===t.rule)?'<span class="rep-tag" title="Repeats">↻</span>':''}</div>${meta?`<div class="meta">${meta}</div>`:''}</div>
       <div class="nums"><div class="amt ${t.amount<0?'debit':'credit'}">${plain(t.amount)}</div><div class="rb">${(t.bal/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div></div>
       <button class="clr${t.cleared?' on':''}" data-act="clear" data-id="${t.id}" aria-label="${t.cleared?'Mark not cleared':'Mark cleared'}" title="Cleared">C</button>
     </div></div>`;
@@ -317,6 +357,7 @@ function render(){
       <button class="chip" data-act="select" ${list.length?'':'disabled'}>Select</button>
       <button class="chip" data-act="statement" ${list.length?'':'disabled'}>New statement</button>
       <button class="chip" data-act="backup">Backup</button>
+      <button class="chip" data-act="repeating">Repeating</button>
       <button class="chip" data-act="themes">Theme</button>
     </div>`;
 
@@ -330,6 +371,8 @@ function render(){
       </div>
       ${tools}
     </header>
+    ${backupBanner()}
+    ${upcoming(a)}
     ${S.sample?`<div class="banner"><span>These are example transactions so you can try things out.</span><button data-act="clearSample">Start fresh</button></div>`:''}
     <div class="list${ui.select?' selecting':''}${ui.stripes?' striped':''}">${rows||'<div class="empty">No transactions yet. Tap + to add one.</div>'}${opening}</div>`;
 
@@ -342,6 +385,20 @@ function render(){
     document.body.insertAdjacentHTML('beforeend',`<button class="fab" id="fab" data-act="add" aria-label="Add transaction">+</button>`);
   }
 }
+function daysSince(d){return Math.round((Date.parse(today())-Date.parse(d))/864e5)}
+function backupBanner(){
+  if(S.sample||!S.txns.length||(S.snooze&&S.snooze>today()))return '';
+  const d=S.lastBackup?daysSince(S.lastBackup):null;
+  if(d!==null&&d<14)return '';
+  return `<div class="banner"><span>${d===null?'You haven’t saved a backup yet.':`Your last backup was ${d} days ago.`}</span><span class="acts"><button data-act="snooze">Later</button><button data-act="backup">Back up</button></span></div>`;
+}
+function upcoming(a){
+  const lim=addPeriod(today(),'monthly');
+  const rs=(S.recurring||[]).filter(r=>(r.acct===a.id||r.to===a.id)&&r.next<=lim).sort((x,y)=>x.next<y.next?-1:1).slice(0,3);
+  if(!rs.length)return '';
+  return `<div class="upcoming"><span class="lbl">Coming up</span>${rs.map(r=>{const amt=r.kind==='in'||(r.kind==='xf'&&r.to===a.id)?r.amount:-r.amount;
+    return `<div class="up-item"><span class="when">${longDate(r.next).replace(/, \d{4}$/,'')}</span><span class="name">${esc(ruleName(r))}</span><span class="amt num ${amt<0?'debit':'credit'}">${plain(amt)}</span><button class="chip sm" data-act="postnow" data-id="${r.id}">Add now</button></div>`}).join('')}</div>`;
+}
 function firstOfMonth(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-01'}
 
 /* ---------- sheets ---------- */
@@ -352,7 +409,7 @@ function sheetTxn(id){
   const t=id?S.txns.find(x=>x.id===id):null;
   const payees=[...new Set(S.txns.map(x=>x.payee).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   const cats=[...new Set(S.txns.map(x=>x.cat).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-  const p=partnerOf(t);
+  const p=partnerOf(t), rule=ruleOf(t);
   const mode=t?(t.xfer?'xf':(t.amount<0?'out':'in')):'out';
   let from=acct().id,to='';
   if(t&&t.xfer){from=t.amount<0?t.acct:(p?p.acct:t.xfer.other);to=t.amount<0?(p?p.acct:t.xfer.other):t.acct}
@@ -373,6 +430,8 @@ function sheetTxn(id){
         <div class="field"><label for="fAmt">Amount</label><input id="fAmt" class="num" inputmode="decimal" placeholder="0.00" value="${t?(Math.abs(t.amount)/100).toFixed(2):''}" ${t?'':'autofocus'} required></div>
         <div class="field"><label for="fDate">Date</label><input id="fDate" type="date" value="${t?t.date:today()}" required></div>
       </div>
+      <div class="field"><label for="fRep">Repeat</label><select id="fRep"><option value="never">Never</option>${Object.entries(FREQ).map(([k,v])=>`<option value="${k}"${rule&&rule.freq===k?' selected':''}>${v}</option>`).join('')}</select>
+        ${rule?`<span class="hint">Changes here also apply to future repeats. Past entries stay as they are. Next one: ${longDate(rule.next)}.</span>`:''}</div>
       ${S.accounts.length>1?`<div class="field" id="acctBox" ${mode==='xf'?'hidden':''}><label for="fAcct">Account</label><select id="fAcct">${opts(t?t.acct:acct().id)}</select></div>`:''}
       <div class="field" id="payeeBox" ${mode==='xf'?'hidden':''}><label for="fPayee">Payee</label><input id="fPayee" value="${esc(t?t.payee:'')}" autocomplete="off" autocapitalize="words"><div class="sugg" id="payeeSugg" hidden></div></div>
       <div class="field" id="catBox" ${mode==='xf'?'hidden':''}><label for="fCat">Category</label><input id="fCat" list="cats" value="${esc(t?t.cat:'')}" autocomplete="off"></div>
@@ -408,18 +467,43 @@ function saveTxn(form){
     Object.assign(fromRec,{acct:from,amount:-amt,date,note,payee:'',cat:'Transfer',xfer:{link,other:to}});
     Object.assign(toRec,{acct:to,amount:amt,date,note,payee:'',cat:'Transfer',xfer:{link,other:from}});
     t.cleared=cleared;
+    syncRule(t,$('#fRep').value,{mode,amt,note,from,to});
   }else{
     if(t&&t.xfer){const p=partnerOf(t);if(p)S.txns=S.txns.filter(x=>x!==p);delete t.xfer}
     const target=$('#fAcct')?$('#fAcct').value:(t?t.acct:acct().id);
     const moved=t&&t.acct!==target;
     if(moved)ui.undo=JSON.stringify(S);
     const data={acct:target,date,note,cleared,payee:$('#fPayee').value.trim(),cat:$('#fCat').value.trim(),amount:mode==='out'?-amt:amt};
-    if(t)Object.assign(t,data); else S.txns.push({id:uid(),seq:++S.seq,...data});
+    if(t)Object.assign(t,data); else {t={id:uid(),seq:++S.seq,...data};S.txns.push(t)}
     remember(data);
+    syncRule(t,$('#fRep').value,{mode,amt,note,payee:data.payee,cat:data.cat});
+    generateDue();
     if(moved){save();closeSheet();render();toast('Moved to '+acctName(target));return}
     if(!t&&target!==acct().id){save();closeSheet();render();ui.undo=null;toast('Added to '+acctName(target));return}
   }
-  save();closeSheet();render();
+  generateDue();save();closeSheet();render();
+}
+
+function sheetRepeating(){
+  const rs=(S.recurring||[]).slice().sort((a,b)=>a.next<b.next?-1:1);
+  openSheet(`<h2>Repeating</h2>
+    <p>These add themselves to your register, not cleared, on their due date. To set one up, pick a Repeat option when adding a transaction.</p>
+    <div class="acct-list">${rs.length?rs.map(r=>`<button class="acct-item" data-act="rule" data-id="${r.id}"><span><b>${esc(ruleName(r))}</b><br><small class="hint">${FREQ[r.freq]} · next ${longDate(r.next)}${r.kind==='xf'?'':' · '+esc(acctName(r.acct))}</small></span><span class="num">${plain(r.kind==='out'||r.kind==='xf'?-r.amount:r.amount)}</span></button>`).join(''):'<p>No repeating transactions yet.</p>'}</div>
+    <div class="sheet-actions"><button class="btn" data-act="close">Done</button></div>`,'repeating');
+}
+function sheetRule(id){
+  const r=(S.recurring||[]).find(x=>x.id===id); if(!r)return;
+  openSheet(`<h2>${esc(ruleName(r))}</h2>
+    <form id="ruleForm" class="fields" data-id="${r.id}">
+      <div class="two">
+        <div class="field"><label for="rAmt">Amount</label><input id="rAmt" class="num" inputmode="decimal" value="${(r.amount/100).toFixed(2)}"></div>
+        <div class="field"><label for="rNext">Next date</label><input id="rNext" type="date" value="${r.next}"></div>
+      </div>
+      <div class="field"><label for="rFreq">Repeat</label><select id="rFreq">${Object.entries(FREQ).map(([k,v])=>`<option value="${k}"${r.freq===k?' selected':''}>${v}</option>`).join('')}</select></div>
+      ${r.kind==='xf'?'':`<div class="field"><label for="rPayee">Payee</label><input id="rPayee" value="${esc(r.payee)}"></div>`}
+      <p>Changes apply to future entries only.</p>
+      <div class="sheet-actions"><button type="button" class="btn ghost" data-act="stoprule" data-id="${r.id}" style="color:var(--debit)">Stop repeating</button><span class="spacer"></span><button type="button" class="btn ghost" data-act="repeating">Back</button><button type="submit" class="btn">Save</button></div>
+    </form>`,'rule');
 }
 
 function sheetDelete(){
@@ -711,6 +795,11 @@ document.addEventListener('click',e=>{
       $('#xfBox').hidden=v!=='xf';$('#payeeBox').hidden=v==='xf';if($('#acctBox'))$('#acctBox').hidden=v==='xf';$('#catBox').hidden=v==='xf';
       $('#clrNote').textContent=v==='xf'?'Applies to this account’s side. Each account clears on its own.':'It shows on your bank statement';break}
     case 'themes':sheetThemes();break;
+    case 'repeating':sheetRepeating();break;
+    case 'rule':sheetRule(id);break;
+    case 'stoprule':{if(el.dataset.armed){S.recurring=S.recurring.filter(r=>r.id!==id);save();sheetRepeating();render()}else{el.dataset.armed='1';el.textContent='Tap again to stop'}break}
+    case 'postnow':{const r=(S.recurring||[]).find(x=>x.id===id);if(!r)return;ui.undo=JSON.stringify(S);postRule(r,r.next);const d=r.next;r.next=addPeriod(r.next,r.freq,r.day);save();render();toast(`Added ${ruleName(r)} for ${longDate(d)}`);break}
+    case 'snooze':{const d=new Date();d.setDate(d.getDate()+3);S.snooze=iso(d);save();render();break}
     case 'opening':sheetOpening();break;
     case 'oseg':document.querySelectorAll('#oSeg button').forEach(b=>b.classList.toggle('on',b===el));break;
     case 'pickTheme':applyTheme(id);try{localStorage.setItem(TKEY,id)}catch(err){}sheetThemes();break;
@@ -727,6 +816,11 @@ document.addEventListener('submit',e=>{
   e.preventDefault(); const f=e.target;
   if(f.id==='txnForm')saveTxn(f);
   if(f.id==='addAcct'){const name=$('#naName').value.trim();if(!name)return;const id=uid();S.accounts.push({id,name,opening:toCents($('#naBal').value),openingDate:today()});S.current=id;S.sample=false;save();closeSheet();render()}
+  if(f.id==='ruleForm'){const r=S.recurring.find(x=>x.id===f.dataset.id);if(!r)return;
+    const v=Math.abs(toCents($('#rAmt').value));if(v)r.amount=v;
+    const nf=$('#rFreq').value;r.freq=nf;const nx=$('#rNext').value;if(nx){r.next=nx;r.day=+nx.slice(8)}
+    if($('#rPayee'))r.payee=$('#rPayee').value.trim();
+    const n=generateDue();save();render();sheetRepeating();if(n)toast(`Added ${n} repeating entr${n>1?'ies':'y'}`);return}
   if(f.id==='openForm'){const v=Math.abs(toCents($('#oAmt').value));const owed=$('#oSeg .out').classList.contains('on');
     const a=acct();ui.undo=JSON.stringify(S);a.opening=owed?-v:v;a.openingDate=$('#oDate').value||a.openingDate;save();closeSheet();render();toast('Opening balance updated');return}
   if(f.id==='renAcct'){const name=$('#raName').value.trim();if(!name)return;acct().name=name;save();closeSheet();render()}
@@ -779,7 +873,8 @@ document.addEventListener('pointerup',endSwipe);
 document.addEventListener('pointercancel',e=>{const r=swipe.el;if(r&&e.pointerId===swipe.id){r.classList.remove('dragging');if(swipe.open!==r)r.style.transform='';swipe.el=null}});
 document.addEventListener('scroll',closeSwipe,{passive:true});
 
-loadTheme(); load(); ensurePayees(); render();
+loadTheme(); load(); ensurePayees(); S.recurring=S.recurring||[];
+{const n=generateDue();if(n)save();render();if(n){ui.undo=null;toast(`Added ${n} repeating entr${n>1?'ies':'y'} that came due`)}}
 })();
 </script>
 </body>
