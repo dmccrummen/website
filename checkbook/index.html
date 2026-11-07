@@ -609,11 +609,15 @@ function sheetAccounts(){
 
 function toCSV(){
   const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
-  const lines=['Account,Date,Payee,Amount,Category,Cleared,Note,Transfer ID'];
+  const lines=['Account,Date,Payee,Amount,Category,Cleared,Note,Transfer ID,Rule ID,Repeat,Repeat To,Repeat Day'];
+  const live=new Set((S.recurring||[]).map(r=>r.id));
   for(const a of S.accounts){
-    lines.push([a.name,a.openingDate,'Opening balance',(a.opening/100).toFixed(2),'','Yes','',''].map(q).join(','));
-    for(const t of txnsOf(a.id))lines.push([a.name,t.date,label(t),(t.amount/100).toFixed(2),t.cat,t.cleared?'Yes':'No',t.note,t.xfer?t.xfer.link:''].map(q).join(','));
+    lines.push([a.name,a.openingDate,'Opening balance',(a.opening/100).toFixed(2),'','Yes','','','','','',''].map(q).join(','));
+    for(const t of txnsOf(a.id))lines.push([a.name,t.date,label(t),(t.amount/100).toFixed(2),t.cat,t.cleared?'Yes':'No',t.note,t.xfer?t.xfer.link:'',live.has(t.rule)?t.rule:'','','',''].map(q).join(','));
   }
+  // repeating rules: Date is the next due date, Repeat is how often
+  for(const r of S.recurring||[])
+    lines.push([acctName(r.acct),r.next,ruleName(r),((r.kind==='in'?1:-1)*r.amount/100).toFixed(2),r.cat||'','',r.note||'','',r.id,FREQ[r.freq],r.kind==='xf'?acctName(r.to):'',r.day||''].map(q).join(','));
   return lines.join('\n');
 }
 async function saveFile(){
@@ -678,6 +682,8 @@ function importCSV(text,replace){
   const iD=col('date'), iP=col('payee','description','name','title'), iA=col('amount');
   const iOut=col('withdrawal','debit','payment','expense'), iIn=col('deposit','credit','income');
   const iC=col('category'), iClr=col('cleared','clear','status','reconciled'), iN=col('note','memo'), iX=col('transfer id'), iT=col('type','kind'), iK=col('checknum','check num','check #','check no','check number');
+  const iRep=h.indexOf('repeat'), iRepTo=h.indexOf('repeat to'), iRepDay=h.indexOf('repeat day'), iRid=h.indexOf('rule id');
+  const ruleMap={}, ruleRefs=[];
   if(iD<0||(iA<0&&iOut<0&&iIn<0))return 'Couldn’t find a date column and an amount column.';
   const before=JSON.stringify(S);
   if(replace)S={v:1,sample:false,seq:0,current:null,accounts:[],txns:[]};
@@ -701,6 +707,18 @@ function importCSV(text,replace){
     if(/expense|payment|withdraw|debit|spend|check|charge|purchase|outflow|bill/.test(tv))amt=-Math.abs(amt);
     else if(/income|deposit|credit|refund|inflow|paycheck|salary/.test(tv))amt=Math.abs(amt);
     const payee=iP>=0?(r[iP]||'').trim():'';
+    const repv=iRep>=0?(r[iRep]||'').trim().toLowerCase():'';
+    if(repv){ // a repeating rule row
+      const freq=Object.keys(FREQ).find(k=>k===repv||FREQ[k].toLowerCase()===repv)||'monthly';
+      const toName=iRepTo>=0?(r[iRepTo]||'').trim():'';
+      const kind=toName?'xf':(amt<0?'out':'in');
+      const rule={id:uid(),kind,acct:a.id,to:toName?find(toName).id:'',amount:Math.abs(amt),payee:kind==='xf'?'':payee,
+        cat:kind==='xf'?'Transfer':(iC>=0?(r[iC]||'').trim():''),note:iN>=0?(r[iN]||'').trim():'',freq,
+        day:(iRepDay>=0&&+r[iRepDay])||+date.slice(8),next:date};
+      S.recurring=S.recurring||[]; S.recurring.push(rule);
+      if(iRid>=0&&r[iRid])ruleMap[r[iRid].trim()]=rule.id;
+      continue;
+    }
     if(/^(opening|initial|starting|beginning) balance$/i.test(payee)){a.opening=amt;a.openingDate=date;continue}
     let cat=iC>=0?(r[iC]||'').trim():''; if(/^(none|uncategorized|-)$/i.test(cat))cat='';
     const chk=iK>=0?(r[iK]||'').trim():'';
@@ -710,18 +728,22 @@ function importCSV(text,replace){
     const t={id:uid(),acct:a.id,seq:++S.seq,date,payee,amount:amt,cat,note,cleared:['yes','y','true','1','c','cleared','r','reconciled','x'].includes(cv)};
     const xl=iX>=0?(r[iX]||'').trim():'';
     if(xl){(links[xl]=links[xl]||[]).push(t)}
+    if(iRid>=0&&(r[iRid]||'').trim())ruleRefs.push([t,r[iRid].trim()]);
     S.txns.push(t); added.push(t); n++; remember(t);
   }
   // re-link transfer pairs
   for(const k in links){const g=links[k];
     if(g.length===2&&g[0].acct!==g[1].acct){const link=uid();
       g[0].xfer={link,other:g[1].acct};g[1].xfer={link,other:g[0].acct};g.forEach(t=>{t.payee='';t.cat=t.cat||'Transfer'})}}
+  for(const [t,old] of ruleRefs)if(ruleMap[old])t.rule=ruleMap[old];
+  const nr=Object.keys(ruleMap).length; generateDue();
   if(!n&&!S.accounts.length){S=JSON.parse(before);return 'No transactions could be read from that file.'}
   for(const name of made){const a=S.accounts.find(x=>x.name===name);const first=S.txns.filter(t=>t.acct===a.id).reduce((m,t)=>t.date<m?t.date:m,a.openingDate);if(first<a.openingDate)a.openingDate=first}
   if(!S.accounts.some(a=>a.id===S.current))S.current=S.accounts[0].id;
   ui.undo=before; S.sample=false; save(); render();
   const accts=new Set(added.map(t=>t.acct)).size;
   let msg=`Imported ${n} transaction${n===1?'':'s'}${accts>1?` into ${accts} accounts`:''}: ${added.filter(t=>t.amount<0).length} payments, ${added.filter(t=>t.amount>0).length} deposits.`;
+  if(nr)msg+=` Restored ${nr} repeating transaction${nr>1?'s':''}.`;
   if(n>2&&added.every(t=>t.amount>0))msg+=' Every amount came in as a deposit, so this file may mark payments in a way I don’t recognize yet.';
   if(made.length&&!replace)msg+=` New account${made.length>1?'s':''}: ${made.join(', ')}.`;
   toast(replace?'Backup restored':'Import finished');
