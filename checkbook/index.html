@@ -108,6 +108,8 @@ button{cursor:pointer}
 .clr{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--line);background:none;font-family:var(--f-num);font-size:12px;font-weight:600;color:var(--muted)}
 .clr.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .selecting .clr{visibility:hidden}
+.opening{width:100%;background:none;font:inherit;text-align:left;cursor:pointer;gap:10px;flex-wrap:wrap}
+.opening .edit{color:var(--accent);font-family:var(--f-body);font-weight:600;margin-left:6px}
 .opening{display:flex;justify-content:space-between;padding:12px 10px;color:var(--muted);font-size:13px;border:1px dashed var(--line);border-radius:10px;margin-top:14px}
 .empty{text-align:center;color:var(--muted);padding:40px 10px}
 
@@ -146,6 +148,7 @@ button{cursor:pointer}
 .seg button{border:0;background:none;padding:10px;font-weight:600}
 .seg button.on.out{background:var(--debit);color:var(--surface)}
 .seg button.on.in{background:var(--credit);color:var(--surface)}
+.seg.two-way{grid-template-columns:1fr 1fr}
 .seg button.on.xf{background:var(--accent);color:var(--accent-ink)}
 .xf-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:end}
 .xf-row .arrow{padding-bottom:10px;color:var(--muted);font-size:18px}
@@ -297,7 +300,7 @@ function render(){
       <button class="clr${t.cleared?' on':''}" data-act="clear" data-id="${t.id}" aria-label="${t.cleared?'Mark not cleared':'Mark cleared'}" title="Cleared">C</button>
     </div></div>`;
   });
-  const opening=`<div class="opening"><span>Opening balance · ${longDate(a.openingDate)}</span><span class="num">${money(a.opening)}</span></div>`;
+  const opening=`<button class="opening" data-act="opening"><span>Opening balance · ${longDate(a.openingDate)}</span><span class="num">${money(a.opening)} <span class="edit">Edit</span></span></button>`;
 
   const tools=ui.select?`
     <div class="selbar">
@@ -481,6 +484,21 @@ function statementPreview(){
   $('#stGo').disabled=!p.d||!p.remove.length;
 }
 
+function sheetOpening(){
+  const a=acct(); const owed=a.opening<0;
+  openSheet(`
+    <h2>Opening balance</h2>
+    <p>What ${esc(a.name)} held on the day this register starts. Every running balance is counted from here.</p>
+    <form id="openForm" class="fields">
+      <div class="seg two-way" id="oSeg"><button type="button" class="in${owed?'':' on'}" data-act="oseg" data-v="in">Money in account</button><button type="button" class="out${owed?' on':''}" data-act="oseg" data-v="out">Money owed</button></div>
+      <div class="two">
+        <div class="field"><label for="oAmt">Amount</label><input id="oAmt" class="num" inputmode="decimal" value="${(Math.abs(a.opening)/100).toFixed(2)}" autofocus></div>
+        <div class="field"><label for="oDate">As of</label><input id="oDate" type="date" value="${a.openingDate}"></div>
+      </div>
+      <p>Use Money owed for a credit card balance.</p>
+      <div class="sheet-actions"><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn">Save</button></div>
+    </form>`,'opening');
+}
 function sheetAccounts(){
   const items=S.accounts.map(a=>{const{bal}=totals(a);return `<button class="acct-item${a.id===S.current?' on':''}" data-act="pick" data-id="${a.id}"><span>${esc(a.name)}</span><span class="num">${money(bal)}</span></button>`}).join('');
   const a=acct();
@@ -498,6 +516,7 @@ function sheetAccounts(){
     <div class="lbl">${esc(a.name)}</div>
     <form id="renAcct" class="fields">
       <div class="field"><label for="raName">Rename</label><input id="raName" value="${esc(a.name)}" required></div>
+      <button type="button" class="acct-item" data-act="opening"><span>Opening balance · ${longDate(a.openingDate)}</span><span class="num">${money(a.opening)}</span></button>
       <div class="sheet-actions" style="margin-top:0">
         ${S.accounts.length>1?'<button type="button" class="btn ghost" data-act="delAcct" id="delAcct" style="color:var(--debit)">Delete account</button><span class="spacer"></span>':''}
         <button class="btn ghost" type="submit">Save name</button></div>
@@ -675,6 +694,8 @@ document.addEventListener('click',e=>{
       $('#xfBox').hidden=v!=='xf';$('#payeeBox').hidden=v==='xf';if($('#acctBox'))$('#acctBox').hidden=v==='xf';$('#catBox').hidden=v==='xf';
       $('#clrNote').textContent=v==='xf'?'Applies to this account’s side. Each account clears on its own.':'It shows on your bank statement';break}
     case 'themes':sheetThemes();break;
+    case 'opening':sheetOpening();break;
+    case 'oseg':document.querySelectorAll('#oSeg button').forEach(b=>b.classList.toggle('on',b===el));break;
     case 'pickTheme':applyTheme(id);try{localStorage.setItem(TKEY,id)}catch(err){}sheetThemes();break;
     case 'close':closeSheet();break;
     case 'undo':if(ui.undo){S=JSON.parse(ui.undo);ui.undo=null;save();render();const t=$('#toast');if(t)t.remove()}break;
@@ -689,6 +710,8 @@ document.addEventListener('submit',e=>{
   e.preventDefault(); const f=e.target;
   if(f.id==='txnForm')saveTxn(f);
   if(f.id==='addAcct'){const name=$('#naName').value.trim();if(!name)return;const id=uid();S.accounts.push({id,name,opening:toCents($('#naBal').value),openingDate:today()});S.current=id;S.sample=false;save();closeSheet();render()}
+  if(f.id==='openForm'){const v=Math.abs(toCents($('#oAmt').value));const owed=$('#oSeg .out').classList.contains('on');
+    const a=acct();ui.undo=JSON.stringify(S);a.opening=owed?-v:v;a.openingDate=$('#oDate').value||a.openingDate;save();closeSheet();render();toast('Opening balance updated');return}
   if(f.id==='renAcct'){const name=$('#raName').value.trim();if(!name)return;acct().name=name;save();closeSheet();render()}
 });
 document.addEventListener('focusin',e=>{if(e.target.id==='fPayee')showSugg()});
