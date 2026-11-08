@@ -134,7 +134,8 @@ button{cursor:pointer}
 .actbar .info{font-size:14px;min-width:0}
 .act-btns{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
 .btn.sm{padding:9px 12px;font-size:14px}
-.sugg{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);margin-top:4px}
+#payeeBox{position:relative}
+.sugg{position:absolute;left:0;right:0;top:100%;z-index:4;margin-top:4px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);box-shadow:0 10px 24px rgba(0,0,0,.22)}
 .sugg-item{display:flex;align-items:center;border-bottom:1px solid var(--line)}
 .sugg-item:last-child{border-bottom:0}
 .sugg-item .pick{flex:1;min-width:0;border:0;background:none;text-align:left;padding:10px 12px;display:flex;justify-content:space-between;gap:10px;font-size:15px}
@@ -305,6 +306,7 @@ function payeeMatches(q){
 }
 function showSugg(){
   const box=$('#payeeSugg'),inp=$('#fPayee'); if(!box||!inp)return;
+  if(!inp.value.trim()){box.hidden=true;return}
   const m=payeeMatches(inp.value);
   if(!m.length||document.activeElement!==inp){box.hidden=true;return}
   box.innerHTML=m.map(([k,p])=>`<div class="sugg-item"><button type="button" class="pick" data-act="pickPayee" data-k="${esc(k)}"><span>${esc(p.name)}</span>${p.cat?`<small>${esc(p.cat)}</small>`:''}</button><button type="button" class="forget" data-act="forgetPayee" data-k="${esc(k)}" aria-label="Forget ${esc(p.name)}">×</button></div>`).join('');
