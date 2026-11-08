@@ -409,7 +409,7 @@ function upcoming(a){
 function firstOfMonth(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-01'}
 
 /* ---------- sheets ---------- */
-function openSheet(html,name){ui.sheet=name;$('#layer').innerHTML=`<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;const f=$('.sheet [autofocus]');if(f)setTimeout(()=>f.focus(),50)}
+function openSheet(html,name){ui.sheet=name;$('#layer').innerHTML=`<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;const f=$('.sheet [autofocus]');if(f){try{f.focus({preventScroll:true})}catch(e){f.focus()}}}
 function closeSheet(){ui.sheet=null;$('#layer').innerHTML=''}
 
 function sheetTxn(id){
@@ -433,14 +433,14 @@ function sheetTxn(id){
           <div class="field"><label for="fTo">To</label><select id="fTo">${opts(to)}</select></div>
         </div>`:`<p>Transfers need a second account. <button type="button" class="chip" data-act="accounts">Add an account</button></p>`}
       </div>
+      <div class="field" id="payeeBox" ${mode==='xf'?'hidden':''}><label for="fPayee">Payee</label><input id="fPayee" value="${esc(t?t.payee:'')}" autocomplete="off" autocapitalize="words" enterkeyhint="next" ${t?'':'autofocus'}><div class="sugg" id="payeeSugg" hidden></div></div>
       <div class="two">
-        <div class="field"><label for="fAmt">Amount</label><input id="fAmt" class="num money" inputmode="numeric" autocomplete="off" placeholder="0.00" value="${fmtMoneyInput(t?(Math.abs(t.amount)/100).toFixed(2):'')}" ${t?'':'autofocus'} required></div>
+        <div class="field"><label for="fAmt">Amount</label><input id="fAmt" class="num money" inputmode="numeric" autocomplete="off" placeholder="0.00" value="${fmtMoneyInput(t?(Math.abs(t.amount)/100).toFixed(2):'')}" required></div>
         <div class="field"><label for="fDate">Date</label><input id="fDate" type="date" value="${t?t.date:today()}" required></div>
       </div>
       <div class="field"><label for="fRep">Repeat</label><select id="fRep"><option value="never">Never</option>${Object.entries(FREQ).map(([k,v])=>`<option value="${k}"${rule&&rule.freq===k?' selected':''}>${v}</option>`).join('')}</select>
         ${rule?`<span class="hint">Changes here also apply to future repeats. Past entries stay as they are. Next one: ${longDate(rule.next)}.</span>`:''}</div>
       ${S.accounts.length>1?`<div class="field" id="acctBox" ${mode==='xf'?'hidden':''}><label for="fAcct">Account</label><select id="fAcct">${opts(t?t.acct:acct().id)}</select></div>`:''}
-      <div class="field" id="payeeBox" ${mode==='xf'?'hidden':''}><label for="fPayee">Payee</label><input id="fPayee" value="${esc(t?t.payee:'')}" autocomplete="off" autocapitalize="words"><div class="sugg" id="payeeSugg" hidden></div></div>
       <div class="field" id="catBox" ${mode==='xf'?'hidden':''}><label for="fCat">Category</label><input id="fCat" list="cats" value="${esc(t?t.cat:'')}" autocomplete="off"></div>
       <div class="field"><label for="fNote">Note</label><input id="fNote" value="${esc(t?t.note:'')}"></div>
       <label class="check"><input type="checkbox" id="fClr" ${t&&t.cleared?'checked':''}><span>Cleared<small id="clrNote">${mode==='xf'?'Applies to this account’s side. Each account clears on its own.':'It shows on your bank statement'}</small></span></label>
@@ -815,7 +815,7 @@ document.addEventListener('click',e=>{
       if(p.cat&&!$('#fCat').value.trim())$('#fCat').value=p.cat;
       const form=$('#txnForm');const cur=$('#seg .on').dataset.v;
       if(!form.dataset.id&&cur!=='xf'){const v=p.out?'out':'in';document.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on',b.dataset.v===v))}
-      $('#payeeSugg').hidden=true;break}
+      $('#payeeSugg').hidden=true;const fa=$('#fAmt');if(fa&&!fa.value)fa.focus();break}
     case 'forgetPayee':{delete S.payees[el.dataset.k];save();showSugg();break}
     case 'dodelete':{const n=ui.sel.size;removeTxns([...ui.sel],$('#keepBal').checked,`Deleted ${n} transaction${n>1?'s':''}`);break}
     case 'deleteOne':{const t=S.txns.find(x=>x.id=== $('#txnForm').dataset.id);removeTxns([t.id],false,'Deleted '+(label(t)||'transaction'));break}
@@ -848,6 +848,7 @@ document.addEventListener('click',e=>{
   }
 });
 document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&e.target.id==='fPayee'){e.preventDefault();const b=$('#payeeSugg');if(b)b.hidden=true;$('#fAmt').focus();return}
   if(e.key==='Escape'&&ui.sheet)closeSheet();
   if((e.key==='Enter'||e.key===' ')&&e.target.matches('.row')){e.preventDefault();e.target.click()}
 });
