@@ -267,37 +267,6 @@ const longDate=s=>{const[y,m,d]=s.split('-').map(Number);return MONTHS[m-1].slic
 
 let S, ui={view:location.hash==='#spending'?'spending':'register',sp:{per:'monthly',acct:'all',cards:false,sel:null},stripes:true,select:false,sel:new Set(),undo:null,toastTimer:null,sheet:null};
 
-function sampleState(){
-  const a='ex1', t=[];
-  let seq=0;
-  const add=(date,payee,amt,cat,cleared,note)=>t.push({id:uid(),acct:a,date,payee,amount:Math.round(amt*100),cat,cleared,note:note||'',seq:++seq});
-  add('2026-10-01','Paycheck',1840,'Income',true);
-  add('2026-10-03','Rent',-1150,'Housing',true);
-  add('2026-10-06','H-E-B',-86.42,'Groceries',true);
-  add('2026-10-10','City Utilities',-112.30,'Utilities',true);
-  add('2026-10-15','Paycheck',1840,'Income',true);
-  add('2026-10-18','Shell',-41.75,'Gas',true);
-  add('2026-10-24','Check #1042',-60,'Gifts',false,'Birthday card for Mom');
-  add('2026-11-01','Paycheck',1840,'Income',true);
-  add('2026-11-02','Rent',-1150,'Housing',false);
-  add('2026-11-04','H-E-B',-92.18,'Groceries',false);
-  add('2026-11-05','Netflix',-15.49,'Subscriptions',false);
-  const v='ex2';
-  const addV=(date,payee,amt,cat,cleared)=>t.push({id:uid(),acct:v,date,payee,amount:Math.round(amt*100),cat,cleared,note:'',seq:++seq});
-  const xfer=(date,amt,cleared,note)=>{const link=uid();
-    t.push({id:uid(),acct:a,date,payee:'',amount:-Math.round(amt*100),cat:'Transfer',cleared,note,seq:++seq,xfer:{link,other:v}});
-    t.push({id:uid(),acct:v,date,payee:'',amount:Math.round(amt*100),cat:'Transfer',cleared,note,seq:++seq,xfer:{link,other:a}})};
-  addV('2026-10-12','Amazon',-64.99,'Shopping',true);
-  addV('2026-10-20','Chick-fil-A',-18.42,'Dining',true);
-  xfer('2026-10-29',300,true,'Card payment');
-  xfer('2026-11-01',400,false,'November card budget');
-  addV('2026-11-03','Target',-52.10,'Shopping',false);
-  const rRent='exr1',rNet='exr2';
-  t.filter(x=>x.payee==='Rent').forEach(x=>x.rule=rRent); t.filter(x=>x.payee==='Netflix').forEach(x=>x.rule=rNet);
-  var recurring=[{id:rRent,kind:'out',acct:a,to:'',amount:115000,payee:'Rent',cat:'Housing',note:'',freq:'monthly',day:2,next:'2026-12-02'},
-    {id:rNet,kind:'out',acct:a,to:'',amount:1549,payee:'Netflix',cat:'Subscriptions',note:'',freq:'monthly',day:5,next:'2026-12-05'}];
-  return {v:1,sample:true,seq,current:a,accounts:[{id:a,name:'Checking',opening:125000,openingDate:'2026-10-01'},{id:v,name:'Visa',opening:-42000,openingDate:'2026-10-01'}],txns:t,recurring};
-}
 function blankState(){const a=uid();return {v:1,sample:false,seq:0,current:a,accounts:[{id:a,name:'Checking',opening:0,openingDate:today()}],txns:[]}}
 const FREQ={weekly:'Weekly',biweekly:'Every 2 weeks',monthly:'Monthly',quarterly:'Every 3 months',yearly:'Yearly'};
 function addPeriod(d,f,day){
@@ -350,7 +319,7 @@ function showSugg(){
   box.innerHTML=m.map(([k,p])=>`<div class="sugg-item"><button type="button" class="pick" data-act="pickPayee" data-k="${esc(k)}"><span>${esc(p.name)}</span>${p.cat?`<small>${esc(p.cat)}</small>`:''}</button><button type="button" class="forget" data-act="forgetPayee" data-k="${esc(k)}" aria-label="Forget ${esc(p.name)}">×</button></div>`).join('');
   box.hidden=false;
 }
-function load(){try{const r=localStorage.getItem(KEY);if(r){const p=JSON.parse(r);if(p&&p.accounts&&p.accounts.length){S=(p.sample&&!p.accounts.some(x=>x.id==='ex2'))?sampleState():p;return}}}catch(e){} S=sampleState()}
+function load(){try{const r=localStorage.getItem(KEY);if(r){const p=JSON.parse(r);if(p&&p.accounts&&p.accounts.length){S=p.sample?blankState():p;return}}}catch(e){} S=blankState()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 
 const acct=()=>S.accounts.find(a=>a.id===S.current)||S.accounts[0];
@@ -422,7 +391,6 @@ function render(){
     </header>
     ${backupBanner()}
     ${upcoming(a)}
-    ${S.sample?`<div class="banner"><span>These are example transactions so you can try things out.</span><button data-act="clearSample">Start fresh</button></div>`:''}
     <div class="list${ui.select?' selecting':''}${ui.stripes?' striped':''}">${rows||'<div class="empty">No transactions yet. Tap + to add one.</div>'}${opening}</div>`;
 
   let bar=$('#actbar'), fab=$('#fab');
