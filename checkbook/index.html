@@ -172,7 +172,7 @@ button{cursor:pointer}
 .actbar .info{font-size:14px;min-width:0}
 .act-btns{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
 .btn.sm{padding:9px 12px;font-size:14px}
-#payeeBox{position:relative}
+#payeeBox,#catBox{position:relative}
 .sugg{position:absolute;left:0;right:0;top:100%;z-index:4;margin-top:4px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);box-shadow:0 10px 24px rgba(0,0,0,.22)}
 .sugg-item{display:flex;align-items:center;border-bottom:1px solid var(--line)}
 .sugg-item:last-child{border-bottom:0}
@@ -310,6 +310,26 @@ function payeeMatches(q){
   q=q.trim().toLowerCase();
   return Object.entries(S.payees||{}).filter(([k])=>k!==q&&(!q||k.includes(q)))
     .sort((a,b)=>(q?(b[0].startsWith(q)-a[0].startsWith(q)):0)||b[1].n-a[1].n||(b[1].last>a[1].last?1:-1)).slice(0,6);
+}
+function catCounts(){
+  const c={},add=(n,w)=>{n=(n||'').trim();if(!n||/^transfer$/i.test(n))return;const k=n.toLowerCase();(c[k]=c[k]||{name:n,n:0}).n+=w};
+  S.txns.forEach(t=>{if(!t.xfer)add(t.cat,1)});(S.archive||[]).forEach(t=>add(t.cat,1));Object.values(S.payees||{}).forEach(p=>add(p.cat,0));
+  return c;
+}
+function showCatSugg(){
+  const box=$('#catSugg'),inp=$('#fCat'); if(!box||!inp)return;
+  const q=inp.value.trim().toLowerCase();
+  if(!q||document.activeElement!==inp){box.hidden=true;return}
+  const m=Object.entries(catCounts()).filter(([k])=>k!==q&&k.includes(q))
+    .sort((a,b)=>(b[0].startsWith(q)-a[0].startsWith(q))||b[1].n-a[1].n||a[0].localeCompare(b[0])).slice(0,6);
+  if(!m.length){box.hidden=true;return}
+  box.innerHTML=m.map(([k,c])=>`<div class="sugg-item"><button type="button" class="pick" data-act="pickCat" data-v="${esc(c.name)}"><span>${esc(c.name)}</span>${c.n?`<small>${c.n} use${c.n>1?'s':''}</small>`:''}</button></div>`).join('');
+  box.hidden=false;
+}
+// a typed payee that exactly matches a known one brings its category along
+function payeeAutofill(){
+  const inp=$('#fPayee'),cat=$('#fCat'); if(!inp||!cat||cat.value.trim())return;
+  const p=(S.payees||{})[inp.value.trim().toLowerCase()]; if(p&&p.cat)cat.value=p.cat;
 }
 function showSugg(){
   const box=$('#payeeSugg'),inp=$('#fPayee'); if(!box||!inp)return;
@@ -512,7 +532,6 @@ function closeSheet(){ui.sheet=null;$('#layer').innerHTML=''}
 function sheetTxn(id){
   const t=id?S.txns.find(x=>x.id===id):null;
   const payees=[...new Set(S.txns.map(x=>x.payee).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-  const cats=[...new Set(S.txns.map(x=>x.cat).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   const p=partnerOf(t), rule=ruleOf(t);
   const mode=t?(t.xfer?'xf':(t.amount<0?'out':'in')):'out';
   let from=acct().id,to='';
@@ -538,10 +557,9 @@ function sheetTxn(id){
       <div class="field"><label for="fRep">Repeat</label><select id="fRep"><option value="never">Never</option>${Object.entries(FREQ).map(([k,v])=>`<option value="${k}"${rule&&rule.freq===k?' selected':''}>${v}</option>`).join('')}</select>
         ${rule?`<span class="hint">Changes here also apply to future repeats. Past entries stay as they are. Next one: ${longDate(rule.next)}.</span>`:''}</div>
       ${S.accounts.length>1?`<div class="field" id="acctBox" ${mode==='xf'?'hidden':''}><label for="fAcct">Account</label><select id="fAcct">${opts(t?t.acct:acct().id)}</select></div>`:''}
-      <div class="field" id="catBox" ${mode==='xf'?'hidden':''}><label for="fCat">Category</label><input id="fCat" list="cats" value="${esc(t?t.cat:'')}" autocomplete="off"></div>
+      <div class="field" id="catBox" ${mode==='xf'?'hidden':''}><label for="fCat">Category</label><input id="fCat" value="${esc(t?t.cat:'')}" autocomplete="off" autocapitalize="words" enterkeyhint="done"><div class="sugg" id="catSugg" hidden></div></div>
       <div class="field"><label for="fNote">Note</label><input id="fNote" value="${esc(t?t.note:'')}"></div>
       <label class="check"><input type="checkbox" id="fClr" ${t&&t.cleared?'checked':''}><span>Cleared<small id="clrNote">${mode==='xf'?'Applies to this account’s side. Each account clears on its own.':'It shows on your bank statement'}</small></span></label>
-      <datalist id="cats">${cats.map(p=>`<option value="${esc(p)}">`).join('')}</datalist>
       <div class="sheet-actions">
         ${t?'<button type="button" class="btn ghost" data-act="deleteOne" style="color:var(--debit)">Delete</button><span class="spacer"></span>':''}
         <button type="button" class="btn ghost" data-act="close">Cancel</button>
@@ -919,6 +937,7 @@ document.addEventListener('click',e=>{
     case 'markclr':{if(!ui.sel.size)return;const v=el.dataset.v==='1';ui.undo=JSON.stringify(S);let n=0;
       for(const t of S.txns)if(ui.sel.has(t.id)){t.cleared=v;n++}
       ui.sel.clear();ui.select=false;save();render();toast(`Marked ${n} ${v?'cleared':'not cleared'}`);break}
+    case 'pickCat':$('#fCat').value=el.dataset.v;$('#catSugg').hidden=true;$('#fCat').blur();break;
     case 'pickPayee':{const p=S.payees[el.dataset.k];if(!p)return;$('#fPayee').value=p.name;
       if(p.cat&&!$('#fCat').value.trim())$('#fCat').value=p.cat;
       const form=$('#txnForm');const cur=$('#seg .on').dataset.v;
@@ -960,7 +979,8 @@ document.addEventListener('click',e=>{
   }
 });
 document.addEventListener('keydown',e=>{
-  if(e.key==='Enter'&&e.target.id==='fPayee'){e.preventDefault();const b=$('#payeeSugg');if(b)b.hidden=true;$('#fAmt').focus();return}
+  if(e.key==='Enter'&&e.target.id==='fPayee'){e.preventDefault();const b=$('#payeeSugg');if(b)b.hidden=true;payeeAutofill();$('#fAmt').focus();return}
+  if(e.key==='Enter'&&e.target.id==='fCat'){e.preventDefault();const b=$('#catSugg');if(b)b.hidden=true;e.target.blur();return}
   if(e.key==='Escape'&&ui.sheet)closeSheet();
   if((e.key==='Enter'||e.key===' ')&&e.target.matches('.row')){e.preventDefault();e.target.click()}
 });
@@ -977,8 +997,8 @@ document.addEventListener('submit',e=>{
     const a=acct();ui.undo=JSON.stringify(S);a.opening=owed?-v:v;a.openingDate=$('#oDate').value||a.openingDate;save();closeSheet();render();toast('Opening balance updated');return}
   if(f.id==='renAcct'){const name=$('#raName').value.trim();if(!name)return;acct().name=name;save();closeSheet();render()}
 });
-document.addEventListener('focusin',e=>{if(e.target.id==='fPayee')showSugg()});
-document.addEventListener('focusout',e=>{if(e.target.id==='fPayee')setTimeout(()=>{const b=$('#payeeSugg');if(b&&document.activeElement!==$('#fPayee'))b.hidden=true},200)});
+document.addEventListener('focusin',e=>{if(e.target.id==='fPayee')showSugg();if(e.target.id==='fCat')showCatSugg()});
+document.addEventListener('focusout',e=>{if(e.target.id==='fPayee')payeeAutofill();if(e.target.id==='fCat')setTimeout(()=>{const b=$('#catSugg');if(b&&document.activeElement!==$('#fCat'))b.hidden=true},200);if(e.target.id==='fPayee')setTimeout(()=>{const b=$('#payeeSugg');if(b&&document.activeElement!==$('#fPayee'))b.hidden=true},200)});
 document.addEventListener('mousedown',e=>{if(e.target.closest('.sugg'))e.preventDefault()});
 document.addEventListener('beforeinput',e=>{
   const el=e.target; if(!el.classList||!el.classList.contains('money'))return;
@@ -991,7 +1011,7 @@ document.addEventListener('focusin',e=>{if(e.target.classList&&e.target.classLis
 document.addEventListener('click',e=>{if(e.target.classList&&e.target.classList.contains('money'))caretEnd(e.target)},true);
 document.addEventListener('input',e=>{
   if(e.target.classList&&e.target.classList.contains('money')){const el=e.target;el.value=fmtDigits(el.value);el.style.borderColor='';caretEnd(el);return}
-  if(e.target.id==='fPayee')showSugg();if(e.target.id==='stDate'||e.target.id==='stCleared')statementPreview()});
+  if(e.target.id==='fPayee')showSugg();if(e.target.id==='fCat')showCatSugg();if(e.target.id==='stDate'||e.target.id==='stCleared')statementPreview()});
 document.addEventListener('change',e=>{
   if(e.target.id==='stCleared')statementPreview();
   if(e.target.id==='spAcct'){ui.sp.acct=e.target.value;ui.sp.sel=null;render()}
