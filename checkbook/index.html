@@ -141,8 +141,11 @@ button{cursor:pointer}
 .chart-wrap{margin-top:12px}
 .chart{position:relative;height:160px;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;border-bottom:1px solid var(--line)}
 .col{border:0;background:none;padding:0;height:100%;display:flex;align-items:flex-end;justify-content:center;cursor:pointer;position:relative;z-index:1}
-.bar{display:block;width:100%;max-width:34px;background:var(--accent);border-radius:4px 4px 0 0;transition:opacity .15s}
-.bar.cur{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.bar{display:flex;flex-direction:column-reverse;width:100%;max-width:34px;border-radius:4px 4px 0 0;overflow:hidden;transition:opacity .15s;gap:1px;background:var(--surface)}
+.seg{display:block;min-height:1px;flex-basis:0}
+.bar.cur{outline:1.5px dashed var(--muted);outline-offset:2px}
+.bar.cur .seg{opacity:.6}
+.dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px;vertical-align:0;flex:none}
 .chart.has-sel .col:not(.on) .bar{opacity:.35}
 .avg-line{position:absolute;left:0;right:0;border-top:1.5px dashed var(--warn);z-index:2;pointer-events:none}
 .avg-line span{position:absolute;right:0;bottom:2px;font-size:11px;font-weight:600;color:var(--warn);background:var(--surface);padding:0 3px;border-radius:3px}
@@ -178,7 +181,7 @@ button{cursor:pointer}
 .cat-top .num{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
 .cat-top small{font-family:var(--f-body);font-weight:500;color:var(--muted);margin-left:8px;font-size:12px;display:inline-block;min-width:30px;text-align:right}
 .track{height:6px;border-radius:3px;background:var(--bg);overflow:hidden}
-.track span{display:block;height:100%;background:var(--accent);border-radius:3px}
+.track span{display:block;height:100%;border-radius:3px}
 .sp-opt{background:var(--surface);border-radius:12px;padding:12px 14px}
 .cat-btn:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:4px}
 .sp-body > .hint{margin:0 2px;font-size:13px;line-height:1.5}
@@ -246,13 +249,10 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}
 @media (prefers-reduced-motion: reduce){.box,.sw .row,.bar{transition:none}}
 
 /* ---------- Themes (each follows the phone's light/dark setting, except Midnight) ---------- */
-@media (prefers-color-scheme: dark){
-@media (prefers-color-scheme: dark){
 :root[data-palette="slate"]{--bg:#EFF0F2;--line:#D8DBE0;--muted:#636A74;--accent:#38424E;--accent-ink:#FFFFFF;--accent-soft:#E0E3E8;--stripe:#ECEEF1;--credit:#2C6B4F}
 @media (prefers-color-scheme: dark){:root[data-palette="slate"]:not([data-theme="light"]){--bg:#111316;--surface:#1A1D21;--line:#2D3238;--muted:#9AA1AB;--accent:#C3CBD5;--accent-ink:#14171B;--accent-soft:#2A2F36;--stripe:#22262B;--credit:#78C7A2}}
 :root[data-palette="slate"][data-theme="dark"]{--bg:#111316;--surface:#1A1D21;--line:#2D3238;--muted:#9AA1AB;--accent:#C3CBD5;--accent-ink:#14171B;--accent-soft:#2A2F36;--stripe:#22262B;--credit:#78C7A2}
 
-@media (prefers-color-scheme: dark){
 html:root[data-palette="midnight"]{--bg:#0A0D13;--surface:#131824;--ink:#E7EBF3;--muted:#8B94A8;--line:#252C3B;--accent:#F2B24C;--accent-ink:#1C1406;
   --accent-soft:#2D2616;--stripe:#1A2030;--debit:#FF8F7D;--credit:#7DD8AA;--warn-bg:#2E2516;--warn:#F4CB8A;--scrim:rgba(0,0,0,.65);color-scheme:dark}
 
@@ -263,6 +263,15 @@ html:root[data-palette="midnight"]{--bg:#0A0D13;--surface:#131824;--ink:#E7EBF3;
 .swatch .dots i{width:22px;height:22px;border-radius:50%;border:1px solid rgba(127,127,127,.35)}
 .swatch b{font-size:14px}
 .swatch small{color:var(--muted);font-size:12px}
+
+/* category colors, one family per theme */
+:root{--k1:#1E6B59;--k2:#43A385;--k3:#2E7D9A;--k4:#79B6CF;--k5:#7E9F4A;--k6:#B9A04C;--k7:#5C7F78;--k-other:#B7C2BE}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--k1:#5CB79C;--k2:#9AD9C3;--k3:#5AA9C9;--k4:#A8D4E6;--k5:#A9C97A;--k6:#E0C56E;--k7:#7F9E98;--k-other:#4A5A5C}}
+:root[data-theme="dark"]{--k1:#5CB79C;--k2:#9AD9C3;--k3:#5AA9C9;--k4:#A8D4E6;--k5:#A9C97A;--k6:#E0C56E;--k7:#7F9E98;--k-other:#4A5A5C}
+:root[data-palette="slate"]{--k1:#38424E;--k2:#5A7390;--k3:#8AA0B8;--k4:#4F7A7A;--k5:#A9B4BF;--k6:#7D6E8F;--k7:#A58F6B;--k-other:#D2D6DB}
+@media (prefers-color-scheme: dark){:root[data-palette="slate"]:not([data-theme="light"]){--k1:#C3CBD5;--k2:#8FA9C8;--k3:#5E7896;--k4:#7FB0AE;--k5:#E3E7EB;--k6:#B3A3C9;--k7:#D2BC92;--k-other:#3A4048}}
+:root[data-palette="slate"][data-theme="dark"]{--k1:#C3CBD5;--k2:#8FA9C8;--k3:#5E7896;--k4:#7FB0AE;--k5:#E3E7EB;--k6:#B3A3C9;--k7:#D2BC92;--k-other:#3A4048}
+html:root[data-palette="midnight"]{--k1:#F2B24C;--k2:#F8D594;--k3:#E07F3C;--k4:#B8925A;--k5:#7D97C9;--k6:#B4C3E0;--k7:#5C6F96;--k-other:#323A4C}
 </style>
 
 </head>
@@ -485,8 +494,13 @@ function renderSpending(){
   const shown=D.keys.slice(-P.show);
   const sel=ui.sp.sel&&D.tot[ui.sp.sel]!=null?ui.sp.sel:null;
   const max=Math.max(1,avg||0,...shown.map(k=>D.tot[k]));
+  // one color per category, ranked by spending across the bars shown, so the chart and list match
+  const rankT={}; shown.forEach(k=>{for(const[c,v]of Object.entries(D.cats[k]||{}))rankT[c]=(rankT[c]||0)+v});
+  const colorOf={}; Object.entries(rankT).sort((a,b)=>b[1]-a[1]).forEach(([c],i)=>{colorOf[c]=i<7?`var(--k${i+1})`:'var(--k-other)'});
+  const colOf=c=>colorOf[c]||'var(--k-other)';
   const bars=shown.map(k=>{const v=D.tot[k],h=Math.max(v?2:0,Math.round(v/max*100));
-    return `<button class="col${k===sel?' on':''}" data-act="spbar" data-k="${k}" aria-label="${pLabel(k,per,true)}: spent ${money(v)}"><span class="bar${k===D.cur?' cur':''}" style="height:${h}%"></span></button>`}).join('');
+    const segs=Object.entries(D.cats[k]||{}).sort((a,b)=>b[1]-a[1]).map(([c,x])=>`<span class="seg" style="flex-grow:${x};background:${colOf(c)}"></span>`).join('');
+    return `<button class="col${k===sel?' on':''}" data-act="spbar" data-k="${k}" aria-label="${pLabel(k,per,true)}: spent ${money(v)}"><span class="bar${k===D.cur?' cur':''}" style="height:${h}%">${segs}</span></button>`}).join('');
   const xl=shown.map(k=>`<span${k===D.cur?' class="now"':''}>${pLabel(k,per)}</span>`).join('');
   const avgLine=avg!=null?`<div class="avg-line" style="bottom:${(avg/max*100).toFixed(2)}%"><span>avg</span></div>`:'';
   const money0=v=>money(Math.round(v));
@@ -504,7 +518,7 @@ function renderSpending(){
   const listFor=c=>{const ts=D.items.filter(t=>catName(t.cat)===c&&inBasis.has(pKey(t.date,per))).sort((a,b)=>a.amount-b.amount);
     const top=ts.slice(0,25);
     return `<div class="cat-list">${top.map(t=>`<div class="cl-row"><span class="cl-date">${longDate(t.date).replace(/, \d{4}$/,'')}</span><span class="cl-name">${esc(t.payee||'No payee')}${nIncl>1?`<small>${esc(acctName(t.acct))}</small>`:''}</span><span class="num">${money(-t.amount)}</span></div>`).join('')}${ts.length>25?`<p class="hint">And ${ts.length-25} smaller.</p>`:''}</div>`};
-  const cats=catRows.length?catRows.map(([c,v])=>{const open=ui.sp.open===c;return `<div class="cat${open?' open':''}"><button class="cat-btn" data-act="spcat" data-c="${esc(c)}" aria-expanded="${open}"><span class="cat-top"><span class="cat-name">${esc(c)}<span class="chev-s" aria-hidden="true">›</span></span><span class="num">${money0(v)}<small>${Math.round(v/catSum*100)}%</small></span></span><span class="track"><span style="width:${(v/catMax*100).toFixed(1)}%"></span></span></button>${open?listFor(c):''}</div>`}).join(''):'<p class="hint">No payments in this range yet.</p>';
+  const cats=catRows.length?catRows.map(([c,v])=>{const open=ui.sp.open===c;return `<div class="cat${open?' open':''}"><button class="cat-btn" data-act="spcat" data-c="${esc(c)}" aria-expanded="${open}"><span class="cat-top"><span class="cat-name"><i class="dot" style="background:${colOf(c)}"></i>${esc(c)}<span class="chev-s" aria-hidden="true">›</span></span><span class="num">${money0(v)}<small>${Math.round(v/catSum*100)}%</small></span></span><span class="track"><span style="width:${(v/catMax*100).toFixed(1)}%;background:${colOf(c)}"></span></span></button>${open?listFor(c):''}</div>`}).join(''):'<p class="hint">No payments in this range yet.</p>';
 
   const cmp=(v)=>{if(avg==null||!avg)return '';const d=(v-avg)/avg;const pct=Math.round(Math.abs(d)*100);
     return pct<3?'<span class="cmp">Spending about average</span>':`<span class="cmp ${d>0?'up':'down'}">Spending ${pct}% ${d>0?'above':'below'} average</span>`};
