@@ -123,6 +123,44 @@ button{cursor:pointer}
 .up-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:8px 8px 8px 12px;font-size:14px}
 .up-item .when{font-family:var(--f-num);font-size:12px;color:var(--muted);white-space:nowrap}
 .up-item .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp-title{margin:2px 0 8px;font-size:24px;font-weight:700;letter-spacing:-.01em}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.tabs button{border:0;background:none;border-radius:7px;padding:8px 6px;font-weight:600;font-size:14px;color:var(--muted)}
+.tabs button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.sp-filters{margin-top:10px}
+.sp-filters select{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface);font-size:15px;max-width:100%}
+.sp-body{display:grid;gap:14px;padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.panel{background:var(--surface);border-radius:12px;padding:14px;display:grid;gap:4px;min-width:0}
+.big{font-size:32px;font-weight:600;letter-spacing:-.02em}
+.sub-line{font-size:14px;color:var(--muted)}
+.sub-line b{color:var(--ink);font-weight:600}
+.chart-wrap{margin-top:12px}
+.chart{position:relative;height:160px;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;border-bottom:1px solid var(--line)}
+.col{border:0;background:none;padding:0;height:100%;display:flex;align-items:flex-end;justify-content:center;cursor:pointer;position:relative;z-index:1}
+.bar{display:block;width:100%;max-width:34px;background:var(--accent);border-radius:4px 4px 0 0;transition:opacity .15s}
+.bar.cur{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.chart.has-sel .col:not(.on) .bar{opacity:.35}
+.avg-line{position:absolute;left:0;right:0;border-top:1.5px dashed var(--warn);z-index:2;pointer-events:none}
+.avg-line span{position:absolute;right:0;bottom:2px;font-size:11px;font-weight:600;color:var(--warn);background:var(--surface);padding:0 3px;border-radius:3px}
+.xlabels{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;margin-top:5px}
+.xlabels span{font-size:11px;color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden}
+.xlabels span.now{color:var(--ink);font-weight:600}
+.detail{margin-top:12px;background:var(--bg);border-radius:10px;padding:10px 12px;display:grid;gap:3px}
+.detail-top{display:flex;justify-content:space-between;gap:10px;font-size:15px}
+.detail-top .num{font-family:var(--f-num);font-weight:600}
+.cmp{font-size:13px;color:var(--muted)}
+.cmp.up{color:var(--debit)} .cmp.down{color:var(--credit)}
+.hint.tap{margin:10px 0 0}
+.cats{display:grid;gap:12px;margin-top:8px}
+.cat{display:grid;gap:5px}
+.cat-top{display:flex;justify-content:space-between;gap:10px;font-size:14.5px}
+.cat-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.cat-top .num{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.cat-top small{font-family:var(--f-body);font-weight:500;color:var(--muted);margin-left:8px;font-size:12px;display:inline-block;min-width:30px;text-align:right}
+.track{height:6px;border-radius:3px;background:var(--bg);overflow:hidden}
+.track span{display:block;height:100%;background:var(--accent);border-radius:3px}
+.sp-opt{background:var(--surface);border-radius:12px;padding:12px 14px}
+.sp-body > .hint{margin:0 2px;font-size:13px;line-height:1.5}
 .chip.gear{display:inline-flex;align-items:center;gap:6px}
 .chip.gear svg{width:16px;height:16px}
 .set-item small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
@@ -184,7 +222,7 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--ink);color:var(--bg);
   border-radius:12px;padding:10px 12px 10px 16px;display:flex;gap:14px;align-items:center;font-size:14px;max-width:calc(100% - 32px);box-shadow:0 6px 20px rgba(0,0,0,.25)}
 .toast button{background:none;border:0;color:var(--accent-soft);font-weight:700;padding:4px 6px}
-@media (prefers-reduced-motion: reduce){.box,.sw .row{transition:none}}
+@media (prefers-reduced-motion: reduce){.box,.sw .row,.bar{transition:none}}
 
 /* ---------- Themes (each follows the phone's light/dark setting, except Midnight) ---------- */
 @media (prefers-color-scheme: dark){
@@ -227,7 +265,7 @@ const money=c=>fmt.format(c/100);
 const plain=c=>(c<0?'−':'+')+(Math.abs(c)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const longDate=s=>{const[y,m,d]=s.split('-').map(Number);return MONTHS[m-1].slice(0,3)+' '+d+', '+y};
 
-let S, ui={stripes:true,select:false,sel:new Set(),undo:null,toastTimer:null,sheet:null};
+let S, ui={view:location.hash==='#spending'?'spending':'register',sp:{per:'monthly',acct:'all',cards:false,sel:null},stripes:true,select:false,sel:new Set(),undo:null,toastTimer:null,sheet:null};
 
 function sampleState(){
   const a='ex1', t=[];
@@ -326,6 +364,7 @@ function totals(a){let bal=a.opening,clr=a.opening,pend=0;for(const t of S.txns)
 /* ---------- main render ---------- */
 function render(){
   const a=acct(); if(!a){S=blankState();return render()}
+  if(ui.view==='spending')return renderSpending();
   const {bal,clr,pend}=totals(a);
   const list=txnsOf(a.id);
   let run=a.opening; const withBal=list.map(t=>(run+=t.amount,{...t,bal:run})).reverse();
@@ -367,6 +406,7 @@ function render(){
       <button class="chip" data-act="select" ${list.length?'':'disabled'}>Select</button>
       <button class="chip" data-act="statement" ${list.length?'':'disabled'}>New statement</button>
       <button class="chip" data-act="repeating">Repeating</button>
+      <button class="chip" data-act="spending">Spending</button>
       <button class="chip gear" data-act="settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</button>
     </div>`;
 
@@ -393,6 +433,93 @@ function render(){
   }else{
     document.body.insertAdjacentHTML('beforeend',`<button class="fab" id="fab" data-act="add" aria-label="Add transaction">+</button>`);
   }
+}
+/* ---------- spending ---------- */
+const CARDPAY=/credit\s*card|card\s*pay/i;
+const PER={monthly:{one:'month',adj:'Monthly',show:12},quarterly:{one:'quarter',adj:'Quarterly',show:8},yearly:{one:'year',adj:'Yearly',show:6}};
+function pKey(d,per){const y=d.slice(0,4),m=+d.slice(5,7);return per==='monthly'?d.slice(0,7):per==='quarterly'?y+'-Q'+(Math.floor((m-1)/3)+1):y}
+function pStart(k,per){if(per==='monthly')return k+'-01';if(per==='quarterly')return k.slice(0,4)+'-'+pad((+k.slice(6)-1)*3+1)+'-01';return k+'-01-01'}
+function pNext(k,per){const y=+k.slice(0,4);if(per==='yearly')return String(y+1);if(per==='quarterly'){const q=+k.slice(6);return q===4?(y+1)+'-Q1':y+'-Q'+(q+1)}const m=+k.slice(5,7);return m===12?(y+1)+'-01':y+'-'+pad(m+1)}
+function pLabel(k,per,long){
+  if(per==='yearly')return k;
+  if(per==='quarterly')return long?'Q'+k.slice(6)+' '+k.slice(0,4):'Q'+k.slice(6)+'\u2019'+k.slice(2,4);
+  const m=+k.slice(5,7);return long?MONTHS[m-1]+' '+k.slice(0,4):MONTHS[m-1].slice(0,3);
+}
+const catName=c=>(c||'').trim()||'Uncategorized';
+function spendData(){
+  const {per,acct:ac,cards}=ui.sp;
+  const items=[...S.txns.filter(t=>!t.xfer),...(S.archive||[])].filter(t=>t.amount<0&&(ac==='all'||t.acct===ac)&&(cards||!CARDPAY.test(t.cat||'')));
+  const cur=pKey(today(),per);
+  if(!items.length)return {items,keys:[cur],tot:{[cur]:0},cats:{},cur,avgKeys:[],partialFirst:false};
+  const first=items.reduce((m,t)=>t.date<m?t.date:m,'9999');
+  const keys=[]; for(let k=pKey(first,per),g=0;g<600;g++){keys.push(k);if(k===cur||k>cur)break;k=pNext(k,per)}
+  const tot={},cats={}; keys.forEach(k=>{tot[k]=0;cats[k]={}});
+  for(const t of items){const k=pKey(t.date,per);if(!(k in tot))continue;const v=-t.amount,c=catName(t.cat);tot[k]+=v;cats[k][c]=(cats[k][c]||0)+v}
+  const slack={monthly:6,quarterly:14,yearly:31}[per];
+  const partialFirst=(Date.parse(first)-Date.parse(pStart(keys[0],per)))/864e5>slack;
+  let avgKeys=keys.filter(k=>k!==cur);
+  if(partialFirst&&avgKeys.length>1)avgKeys=avgKeys.slice(1);
+  else if(partialFirst&&avgKeys.length===1)avgKeys=[];
+  return {items,keys,tot,cats,cur,avgKeys,partialFirst,first};
+}
+function renderSpending(){
+  const D=spendData(), P=PER[ui.sp.per], per=ui.sp.per;
+  const nAvg=D.avgKeys.length;
+  const avg=nAvg?D.avgKeys.reduce((s,k)=>s+D.tot[k],0)/nAvg:null;
+  const curTot=D.tot[D.cur]||0;
+  const shown=D.keys.slice(-P.show);
+  const sel=ui.sp.sel&&D.tot[ui.sp.sel]!=null?ui.sp.sel:null;
+  const max=Math.max(1,avg||0,...shown.map(k=>D.tot[k]));
+  const bars=shown.map(k=>{const v=D.tot[k],h=Math.max(v?2:0,Math.round(v/max*100));
+    return `<button class="col${k===sel?' on':''}" data-act="spbar" data-k="${k}" aria-label="${pLabel(k,per,true)}: ${money(-v).replace('-','')}"><span class="bar${k===D.cur?' cur':''}" style="height:${h}%"></span></button>`}).join('');
+  const xl=shown.map(k=>`<span${k===D.cur?' class="now"':''}>${pLabel(k,per)}</span>`).join('');
+  const avgLine=avg!=null?`<div class="avg-line" style="bottom:${(avg/max*100).toFixed(2)}%"><span>avg</span></div>`:'';
+
+  // categories: averaged over the same periods as the headline number
+  const basis=nAvg?D.avgKeys:[D.cur];
+  const ct={}; basis.forEach(k=>{for(const[c,v]of Object.entries(D.cats[k]||{}))ct[c]=(ct[c]||0)+v});
+  const catRows=Object.entries(ct).map(([c,v])=>[c,v/basis.length]).sort((a,b)=>b[1]-a[1]);
+  const catSum=catRows.reduce((s,r)=>s+r[1],0)||1, catMax=catRows.length?catRows[0][1]:1;
+  const cats=catRows.length?catRows.map(([c,v])=>`<div class="cat"><div class="cat-top"><span class="cat-name">${esc(c)}</span><span class="num">${money(Math.round(v))}<small>${Math.round(v/catSum*100)}%</small></span></div><div class="track"><span style="width:${(v/catMax*100).toFixed(1)}%"></span></div></div>`).join(''):'<p class="hint">No payments in this range yet.</p>';
+
+  const cmp=(v)=>{if(avg==null||!avg)return '';const d=(v-avg)/avg;const pct=Math.round(Math.abs(d)*100);
+    return pct<3?'<span class="cmp">about average</span>':`<span class="cmp ${d>0?'up':'down'}">${pct}% ${d>0?'above':'below'} average</span>`};
+  let detail='';
+  if(sel){const v=D.tot[sel];const top=Object.entries(D.cats[sel]||{}).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    detail=`<div class="detail"><div class="detail-top"><b>${pLabel(sel,per,true)}${sel===D.cur?' so far':''}</b><span class="num">${money(v)}</span></div>${cmp(v)}${top.length?`<div class="hint">Top: ${top.map(([c,x])=>esc(c)+' '+money(x)).join(' · ')}</div>`:''}</div>`}
+
+  let basisNote;
+  if(nAvg){const span=nAvg===1?pLabel(D.avgKeys[0],per,true):pLabel(D.avgKeys[0],per,true)+' to '+pLabel(D.avgKeys[nAvg-1],per,true);
+    basisNote=`Based on ${nAvg} full ${P.one}${nAvg>1?'s':''}, ${span}. This ${P.one} is still in progress, so it isn’t counted${D.partialFirst?`, and neither is ${pLabel(D.keys[0],per,true)}, when your records start partway through`:''}.`}
+  else basisNote=D.items.length?`There isn’t a full ${P.one} of records yet, so this shows ${pLabel(D.cur,per,true)} so far. An average appears once a ${P.one} is complete.`:'';
+
+  const acctOpts=`<option value="all">All accounts</option>`+S.accounts.map(a=>`<option value="${a.id}"${a.id===ui.sp.acct?' selected':''}>${esc(a.name)}</option>`).join('');
+  $('#app').innerHTML=`
+    <header class="head">
+      <button class="acct-btn" data-act="register"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" style="transform:rotate(90deg)"><path d="M4 6l4 4 4-4"/></svg>Register</button>
+      <h1 class="sp-title">Spending</h1>
+      <div class="tabs" role="tablist">${Object.entries(PER).map(([k,v])=>`<button role="tab" aria-selected="${k===per}" class="${k===per?'on':''}" data-act="per" data-v="${k}">${v.adj}</button>`).join('')}</div>
+      <div class="sp-filters"><select id="spAcct" aria-label="Account">${acctOpts}</select></div>
+    </header>
+    <div class="sp-body">
+      <section class="panel">
+        <span class="lbl">${avg!=null?`Average per ${P.one}`:`This ${P.one} so far`}</span>
+        <div class="big num">${money(Math.round(avg!=null?avg:curTot))}</div>
+        ${avg!=null?`<div class="sub-line">This ${P.one} so far <b class="num">${money(curTot)}</b></div>`:''}
+        <div class="chart-wrap">
+          <div class="chart${sel?' has-sel':''}">${avgLine}${bars}</div>
+          <div class="xlabels">${xl}</div>
+        </div>
+        ${detail||`<p class="hint tap">Tap a bar to see that ${P.one}.</p>`}
+      </section>
+      <section class="panel">
+        <span class="lbl">${nAvg?`Average per ${P.one} by category`:`By category, ${pLabel(D.cur,per,true)} so far`}</span>
+        <div class="cats">${cats}</div>
+      </section>
+      <label class="check sp-opt"><input type="checkbox" id="spCards" ${ui.sp.cards?'checked':''}><span>Count credit card payments<small>Off by default. Paying a card bill from checking would count the same purchases twice. Transfers are never counted.</small></span></label>
+      ${basisNote?`<p class="hint">${basisNote}</p>`:''}
+    </div>`;
+  const bar=$('#actbar'),fab=$('#fab'); if(bar)bar.remove(); if(fab)fab.remove();
 }
 function daysSince(d){return Math.round((Date.parse(today())-Date.parse(d))/864e5)}
 function backupBanner(){
@@ -533,7 +660,7 @@ function sheetDelete(){
     </div>
     <div class="sheet-actions"><button class="btn ghost" data-act="close">Cancel</button><button class="btn danger" data-act="dodelete">Delete</button></div>`,'delete');
 }
-function removeTxns(ids,keepBal,label,newOpeningDate){
+function removeTxns(ids,keepBal,msg,newOpeningDate){
   const a=acct(); const set=new Set(ids);
   ui.undo=JSON.stringify(S);
   for(const t of S.txns.filter(x=>set.has(x.id)&&x.xfer)){
@@ -543,11 +670,12 @@ function removeTxns(ids,keepBal,label,newOpeningDate){
   }
   const mine=new Set([...set].filter(id=>{const t=S.txns.find(x=>x.id===id);return t&&t.acct===a.id}));
   const sum=S.txns.filter(t=>mine.has(t.id)).reduce((s,t)=>s+t.amount,0);
+  if(keepBal){S.archive=S.archive||[];for(const t of S.txns)if(set.has(t.id)&&!t.xfer)S.archive.push({acct:t.acct,date:t.date,amount:t.amount,cat:t.cat||'',payee:t.payee||''})}
   S.txns=S.txns.filter(t=>!set.has(t.id));
   if(keepBal)a.opening+=sum;
   if(newOpeningDate)a.openingDate=newOpeningDate;
   else if(keepBal){const left=txnsOf(a.id); if(left.length&&left[0].date>a.openingDate)a.openingDate=left[0].date}
-  save(); ui.sel.clear(); ui.select=false; closeSheet(); render(); toast(label);
+  save(); ui.sel.clear(); ui.select=false; closeSheet(); render(); toast(msg);
 }
 
 function sheetStatement(){
@@ -618,7 +746,7 @@ function sheetAccounts(){
 
 function toCSV(){
   const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
-  const lines=['Account,Date,Payee,Amount,Category,Cleared,Note,Transfer ID,Rule ID,Repeat,Repeat To,Repeat Day'];
+  const lines=['Account,Date,Payee,Amount,Category,Cleared,Note,Transfer ID,Rule ID,Repeat,Repeat To,Repeat Day,Archived'];
   const live=new Set((S.recurring||[]).map(r=>r.id));
   for(const a of S.accounts){
     lines.push([a.name,a.openingDate,'Opening balance',(a.opening/100).toFixed(2),'','Yes','','','','','',''].map(q).join(','));
@@ -627,6 +755,9 @@ function toCSV(){
   // repeating rules: Date is the next due date, Repeat is how often
   for(const r of S.recurring||[])
     lines.push([acctName(r.acct),r.next,ruleName(r),((r.kind==='in'?1:-1)*r.amount/100).toFixed(2),r.cat||'','',r.note||'','',r.id,FREQ[r.freq],r.kind==='xf'?acctName(r.to):'',r.day||''].map(q).join(','));
+  // history cleared by New statement, kept for the Spending page
+  for(const t of (S.archive||[]).slice().sort((x,y)=>x.date<y.date?-1:1))
+    lines.push([acctName(t.acct),t.date,t.payee,(t.amount/100).toFixed(2),t.cat,'Yes','','','','','','','Yes'].map(q).join(','));
   return lines.join('\n');
 }
 async function saveFile(){
@@ -700,6 +831,7 @@ function importCSV(text,replace){
   const iD=col('date'), iP=col('payee','description','name','title'), iA=col('amount');
   const iOut=col('withdrawal','debit','payment','expense'), iIn=col('deposit','credit','income');
   const iC=col('category'), iClr=col('cleared','clear','status','reconciled'), iN=col('note','memo'), iX=col('transfer id'), iT=col('type','kind'), iK=col('checknum','check num','check #','check no','check number');
+  const iArch=h.indexOf('archived'); let nArch=0;
   const iRep=h.indexOf('repeat'), iRepTo=h.indexOf('repeat to'), iRepDay=h.indexOf('repeat day'), iRid=h.indexOf('rule id');
   const ruleMap={}, ruleRefs=[];
   if(iD<0||(iA<0&&iOut<0&&iIn<0))return 'Couldn’t find a date column and an amount column.';
@@ -725,6 +857,11 @@ function importCSV(text,replace){
     if(/expense|payment|withdraw|debit|spend|check|charge|purchase|outflow|bill/.test(tv))amt=-Math.abs(amt);
     else if(/income|deposit|credit|refund|inflow|paycheck|salary/.test(tv))amt=Math.abs(amt);
     const payee=iP>=0?(r[iP]||'').trim():'';
+    if(iArch>=0&&/^(yes|y|true|1)$/i.test((r[iArch]||'').trim())){
+      let c=iC>=0?(r[iC]||'').trim():''; if(/^(none|uncategorized|-)$/i.test(c))c='';
+      if(amt){S.archive=S.archive||[];S.archive.push({acct:a.id,date,amount:amt,cat:c,payee});nArch++}
+      continue;
+    }
     const repv=iRep>=0?(r[iRep]||'').trim().toLowerCase():'';
     if(repv){ // a repeating rule row
       const freq=Object.keys(FREQ).find(k=>k===repv||FREQ[k].toLowerCase()===repv)||'monthly';
@@ -761,6 +898,7 @@ function importCSV(text,replace){
   ui.undo=before; S.sample=false; save(); render();
   const accts=new Set(added.map(t=>t.acct)).size;
   let msg=`Imported ${n} transaction${n===1?'':'s'}${accts>1?` into ${accts} accounts`:''}: ${added.filter(t=>t.amount<0).length} payments, ${added.filter(t=>t.amount>0).length} deposits.`;
+  if(nArch)msg+=` Kept ${nArch} older entr${nArch>1?'ies':'y'} for the Spending page.`;
   if(nr)msg+=` Restored ${nr} repeating transaction${nr>1?'s':''}.`;
   if(n>2&&added.every(t=>t.amount>0))msg+=' Every amount came in as a deposit, so this file may mark payments in a way I don’t recognize yet.';
   if(made.length&&!replace)msg+=` New account${made.length>1?'s':''}: ${made.join(', ')}.`;
@@ -830,13 +968,17 @@ document.addEventListener('click',e=>{
     case 'import':{const txt=$('#csvIn').value;if(!txt.trim()){$('#impMsg').textContent='Choose a file or paste CSV text first.';return}$('#impMsg').textContent=importCSV(txt,$('#impReplace').checked);break}
     case 'accounts':sheetAccounts();break;
     case 'pick':S.current=id;ui.sel.clear();save();closeSheet();render();break;
-    case 'delAcct':{if(el.dataset.armed){S.txns=S.txns.filter(t=>t.acct!==a.id);S.accounts=S.accounts.filter(x=>x.id!==a.id);S.current=S.accounts[0].id;save();closeSheet();render()}else{el.dataset.armed='1';el.textContent='Tap again to delete'}break}
+    case 'delAcct':{if(el.dataset.armed){S.txns=S.txns.filter(t=>t.acct!==a.id);S.archive=(S.archive||[]).filter(t=>t.acct!==a.id);S.accounts=S.accounts.filter(x=>x.id!==a.id);S.current=S.accounts[0].id;save();closeSheet();render()}else{el.dataset.armed='1';el.textContent='Tap again to delete'}break}
     case 'seg':{const v=el.dataset.v;document.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
       $('#xfBox').hidden=v!=='xf';$('#payeeBox').hidden=v==='xf';if($('#acctBox'))$('#acctBox').hidden=v==='xf';$('#catBox').hidden=v==='xf';
       $('#clrNote').textContent=v==='xf'?'Applies to this account’s side. Each account clears on its own.':'It shows on your bank statement';break}
     case 'themes':sheetThemes();break;
     case 'settings':sheetSettings();break;
     case 'repeating':sheetRepeating();break;
+    case 'spending':ui.sp.sel=null;location.hash='spending';break;
+    case 'register':if(location.hash){try{history.replaceState(null,'',location.pathname+location.search)}catch(err){location.hash=''}}ui.view='register';render();scrollTo(0,0);break;
+    case 'per':ui.sp.per=el.dataset.v;ui.sp.sel=null;try{localStorage.setItem(TKEY+'-per',ui.sp.per)}catch(err){}render();break;
+    case 'spbar':ui.sp.sel=ui.sp.sel===el.dataset.k?null:el.dataset.k;render();break;
     case 'rule':sheetRule(id);break;
     case 'stoprule':{if(el.dataset.armed){S.recurring=S.recurring.filter(r=>r.id!==id);save();sheetRepeating();render()}else{el.dataset.armed='1';el.textContent='Tap again to stop'}break}
     case 'postnow':{const r=(S.recurring||[]).find(x=>x.id===id);if(!r)return;ui.undo=JSON.stringify(S);postRule(r,r.next);const d=r.next;r.next=addPeriod(r.next,r.freq,r.day);save();render();toast(`Added ${ruleName(r)} for ${longDate(d)}`);break}
@@ -884,6 +1026,8 @@ document.addEventListener('input',e=>{
   if(e.target.id==='fPayee')showSugg();if(e.target.id==='stDate'||e.target.id==='stCleared')statementPreview()});
 document.addEventListener('change',e=>{
   if(e.target.id==='stCleared')statementPreview();
+  if(e.target.id==='spAcct'){ui.sp.acct=e.target.value;ui.sp.sel=null;render()}
+  if(e.target.id==='spCards'){ui.sp.cards=e.target.checked;ui.sp.sel=null;render()}
   if(e.target.id==='stripeToggle'){ui.stripes=e.target.checked;try{localStorage.setItem(TKEY+'-stripes',ui.stripes?'on':'off')}catch(err){}render()}
   if(e.target.id==='csvFile'&&e.target.files[0]){const r=new FileReader();r.onload=()=>{$('#csvIn').value=r.result;$('#impMsg').textContent='File loaded. Tap Import.'};r.readAsText(e.target.files[0])}
 });
@@ -926,6 +1070,8 @@ document.addEventListener('pointerup',endSwipe);
 document.addEventListener('pointercancel',e=>{const r=swipe.el;if(r&&e.pointerId===swipe.id){r.classList.remove('dragging');if(swipe.open!==r)r.style.transform='';swipe.el=null}});
 document.addEventListener('scroll',closeSwipe,{passive:true});
 
+window.addEventListener('hashchange',()=>{const v=location.hash==='#spending'?'spending':'register';if(v!==ui.view){ui.view=v;closeSheet();render();scrollTo(0,0)}});
+try{const pp=localStorage.getItem(TKEY+'-per');if(PER[pp])ui.sp.per=pp}catch(e){}
 loadTheme(); load(); ensurePayees(); S.recurring=S.recurring||[];
 {const n=generateDue();if(n)save();render();if(n){ui.undo=null;toast(`Added ${n} repeating entr${n>1?'ies':'y'} that came due`)}}
 })();
