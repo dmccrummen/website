@@ -128,7 +128,11 @@ button{cursor:pointer}
 .tabs button{border:0;background:none;border-radius:7px;padding:8px 6px;font-weight:600;font-size:14px;color:var(--muted)}
 .tabs button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .sp-filters{margin-top:10px}
-.sp-filters select{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface);font-size:15px;max-width:100%}
+.sp-filters{display:flex;flex-wrap:wrap;gap:8px}
+.acct-chip{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
+.acct-chip.on{color:var(--ink);text-decoration:none;border-color:var(--accent);background:var(--accent-soft)}
+.acct-chip .tick{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line);font-size:10px;font-weight:700}
+.acct-chip.on .tick{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .sp-body{display:grid;gap:14px;padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .panel{background:var(--surface);border-radius:12px;padding:14px;display:grid;gap:4px;min-width:0}
 .big{font-size:32px;font-weight:600;letter-spacing:-.02em}
@@ -454,8 +458,8 @@ function pLabel(k,per,long){
 const NOCAT=/^(none|uncategorized|n\/a|-)?$/i;
 const catName=c=>NOCAT.test((c||'').trim())?'Uncategorized':c.trim();
 function spendData(){
-  const {per,acct:ac,cards}=ui.sp;
-  const pool=[...S.txns.filter(t=>!t.xfer),...(S.archive||[])].filter(t=>(ac==='all'||t.acct===ac)&&(cards||!CARDPAY.test(t.cat||'')));
+  const {per,cards}=ui.sp; const ex=new Set(S.spExclude||[]);
+  const pool=[...S.txns.filter(t=>!t.xfer),...(S.archive||[])].filter(t=>!ex.has(t.acct)&&(cards||!CARDPAY.test(t.cat||'')));
   const items=pool.filter(t=>t.amount<0), income=pool.filter(t=>t.amount>0);
   const cur=pKey(today(),per);
   if(!pool.length)return {items,income,keys:[cur],tot:{[cur]:0},inc:{[cur]:0},cats:{},cur,avgKeys:[],partialFirst:false};
@@ -473,6 +477,7 @@ function spendData(){
 }
 function renderSpending(){
   const D=spendData(), P=PER[ui.sp.per], per=ui.sp.per;
+  const exSet=new Set(S.spExclude||[]), nIncl=S.accounts.filter(a=>!exSet.has(a.id)).length;
   const nAvg=D.avgKeys.length;
   const mean=(m,ks)=>ks.reduce((s,k)=>s+(m[k]||0),0)/ks.length;
   const avg=nAvg?mean(D.tot,D.avgKeys):null, avgInc=nAvg?mean(D.inc,D.avgKeys):null;
@@ -498,7 +503,7 @@ function renderSpending(){
   const inBasis=new Set(basis);
   const listFor=c=>{const ts=D.items.filter(t=>catName(t.cat)===c&&inBasis.has(pKey(t.date,per))).sort((a,b)=>a.amount-b.amount);
     const top=ts.slice(0,25);
-    return `<div class="cat-list">${top.map(t=>`<div class="cl-row"><span class="cl-date">${longDate(t.date).replace(/, \d{4}$/,'')}</span><span class="cl-name">${esc(t.payee||'No payee')}${ui.sp.acct==='all'?`<small>${esc(acctName(t.acct))}</small>`:''}</span><span class="num">${money(-t.amount)}</span></div>`).join('')}${ts.length>25?`<p class="hint">And ${ts.length-25} smaller.</p>`:''}</div>`};
+    return `<div class="cat-list">${top.map(t=>`<div class="cl-row"><span class="cl-date">${longDate(t.date).replace(/, \d{4}$/,'')}</span><span class="cl-name">${esc(t.payee||'No payee')}${nIncl>1?`<small>${esc(acctName(t.acct))}</small>`:''}</span><span class="num">${money(-t.amount)}</span></div>`).join('')}${ts.length>25?`<p class="hint">And ${ts.length-25} smaller.</p>`:''}</div>`};
   const cats=catRows.length?catRows.map(([c,v])=>{const open=ui.sp.open===c;return `<div class="cat${open?' open':''}"><button class="cat-btn" data-act="spcat" data-c="${esc(c)}" aria-expanded="${open}"><span class="cat-top"><span class="cat-name">${esc(c)}<span class="chev-s" aria-hidden="true">›</span></span><span class="num">${money0(v)}<small>${Math.round(v/catSum*100)}%</small></span></span><span class="track"><span style="width:${(v/catMax*100).toFixed(1)}%"></span></span></button>${open?listFor(c):''}</div>`}).join(''):'<p class="hint">No payments in this range yet.</p>';
 
   const cmp=(v)=>{if(avg==null||!avg)return '';const d=(v-avg)/avg;const pct=Math.round(Math.abs(d)*100);
@@ -512,13 +517,13 @@ function renderSpending(){
   const head=sel?`${pLabel(sel,per,true)}${sel===D.cur?' so far':''}`:(avg!=null?`Average per ${P.one}`:`${pLabel(D.cur,per,true)} so far`);
   const sp=sel?D.tot[sel]:(avg!=null?avg:curTot), inc=sel?D.inc[sel]:(avg!=null?avgInc:curInc);
   const catHead=sel?`By category, ${pLabel(sel,per,true)}${sel===D.cur?' so far':''}`:(nAvg?`Average per ${P.one} by category`:`By category, ${pLabel(D.cur,per,true)} so far`);
-  const acctOpts=`<option value="all">All accounts</option>`+S.accounts.map(a=>`<option value="${a.id}"${a.id===ui.sp.acct?' selected':''}>${esc(a.name)}</option>`).join('');
+  const acctChips=S.accounts.map(a=>{const on=!exSet.has(a.id);return `<button class="chip acct-chip${on?' on':''}" data-act="spacct" data-id="${a.id}" aria-pressed="${on}"><span class="tick" aria-hidden="true">${on?'✓':''}</span>${esc(a.name)}</button>`}).join('');
   $('#app').innerHTML=`
     <header class="head">
       <button class="acct-btn" data-act="register"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" style="transform:rotate(90deg)"><path d="M4 6l4 4 4-4"/></svg>Register</button>
       <h1 class="sp-title">Spending</h1>
       <div class="tabs" role="tablist">${Object.entries(PER).map(([k,v])=>`<button role="tab" aria-selected="${k===per}" class="${k===per?'on':''}" data-act="per" data-v="${k}">${v.adj}</button>`).join('')}</div>
-      <div class="sp-filters"><select id="spAcct" aria-label="Account">${acctOpts}</select></div>
+      ${S.accounts.length>1?`<div class="sp-filters" role="group" aria-label="Accounts included">${acctChips}</div>`:''}
     </header>
     <div class="sp-body">
       <section class="panel">
@@ -537,6 +542,7 @@ function renderSpending(){
         ${catRows.length?'<p class="hint tap">Tap a category to see its payments.</p>':''}
       </section>
       <label class="check sp-opt"><input type="checkbox" id="spCards" ${ui.sp.cards?'checked':''}><span>Count credit card payments<small>Off by default. Paying a card bill from checking would count the same purchases twice. Transfers are never counted.</small></span></label>
+      ${!nIncl?'<p class="hint">Every account is turned off. Tap an account above to include it.</p>':''}
       ${basisNote?`<p class="hint">${basisNote}</p>`:''}
     </div>`;
   const bar=$('#actbar'),fab=$('#fab'); if(bar)bar.remove(); if(fab)fab.remove();
@@ -998,6 +1004,7 @@ document.addEventListener('click',e=>{
     case 'register':if(location.hash){try{history.replaceState(null,'',location.pathname+location.search)}catch(err){location.hash=''}}ui.view='register';render();scrollTo(0,0);break;
     case 'per':ui.sp.per=el.dataset.v;ui.sp.sel=null;ui.sp.open=null;try{localStorage.setItem(TKEY+'-per',ui.sp.per)}catch(err){}render();break;
     case 'spbar':ui.sp.sel=ui.sp.sel===el.dataset.k?null:el.dataset.k;ui.sp.open=null;render();break;
+    case 'spacct':{const x=new Set(S.spExclude||[]);x.has(id)?x.delete(id):x.add(id);S.spExclude=[...x];save();ui.sp.sel=null;ui.sp.open=null;render();break}
     case 'spcat':ui.sp.open=ui.sp.open===el.dataset.c?null:el.dataset.c;render();break;
     case 'rule':sheetRule(id);break;
     case 'stoprule':{if(el.dataset.armed){S.recurring=S.recurring.filter(r=>r.id!==id);save();sheetRepeating();render()}else{el.dataset.armed='1';el.textContent='Tap again to stop'}break}
@@ -1047,7 +1054,6 @@ document.addEventListener('input',e=>{
   if(e.target.id==='fPayee')showSugg();if(e.target.id==='fCat')showCatSugg();if(e.target.id==='stDate'||e.target.id==='stCleared')statementPreview()});
 document.addEventListener('change',e=>{
   if(e.target.id==='stCleared')statementPreview();
-  if(e.target.id==='spAcct'){ui.sp.acct=e.target.value;ui.sp.sel=null;ui.sp.open=null;render()}
   if(e.target.id==='spCards'){ui.sp.cards=e.target.checked;ui.sp.open=null;render()}
   if(e.target.id==='stripeToggle'){ui.stripes=e.target.checked;try{localStorage.setItem(TKEY+'-stripes',ui.stripes?'on':'off')}catch(err){}render()}
   if(e.target.id==='csvFile'&&e.target.files[0]){const r=new FileReader();r.onload=()=>{$('#csvIn').value=r.result;$('#impMsg').textContent='File loaded. Tap Import.'};r.readAsText(e.target.files[0])}
