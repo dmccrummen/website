@@ -145,6 +145,22 @@ button{cursor:pointer}
 .xlabels{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;margin-top:5px}
 .xlabels span{font-size:11px;color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden}
 .xlabels span.now{color:var(--ink);font-weight:600}
+.panel-top{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:28px}
+.flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:4px}
+.flow > div{display:grid;gap:2px;min-width:0}
+.flow b{font-size:clamp(15px,4.6vw,21px);font-weight:600;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flow > div:nth-child(2){text-align:center}.flow > div:nth-child(3){text-align:right}
+.debit-t{color:var(--debit)}.credit-t{color:var(--credit)}
+.sub-line{margin-top:6px}
+.cat-btn{display:grid;gap:5px;width:100%;border:0;background:none;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.chev-s{display:inline-block;margin-left:6px;color:var(--muted);transition:transform .15s}
+.cat.open .chev-s{transform:rotate(90deg)}
+.cat-list{margin-top:6px;border-top:1px solid var(--line);display:grid}
+.cl-row{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.cl-date{font-family:var(--f-num);font-size:12px;color:var(--muted)}
+.cl-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cl-name small{color:var(--muted);font-size:12px;margin-left:6px}
+.cl-row .num{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-weight:600}
 .detail{margin-top:12px;background:var(--bg);border-radius:10px;padding:10px 12px;display:grid;gap:3px}
 .detail-top{display:flex;justify-content:space-between;gap:10px;font-size:15px}
 .detail-top .num{font-family:var(--f-num);font-weight:600}
@@ -160,6 +176,7 @@ button{cursor:pointer}
 .track{height:6px;border-radius:3px;background:var(--bg);overflow:hidden}
 .track span{display:block;height:100%;background:var(--accent);border-radius:3px}
 .sp-opt{background:var(--surface);border-radius:12px;padding:12px 14px}
+.cat-btn:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:4px}
 .sp-body > .hint{margin:0 2px;font-size:13px;line-height:1.5}
 .chip.gear{display:inline-flex;align-items:center;gap:6px}
 .chip.gear svg{width:16px;height:16px}
@@ -305,6 +322,7 @@ function remember(t){
   const k=t.payee.trim().toLowerCase(); if(!k)return;
   const o=S.payees[k]; S.payees[k]={name:t.payee.trim(),cat:t.cat||(o&&o.cat)||'',out:t.amount<0,n:((o&&o.n)||0)+1,last:t.date>((o&&o.last)||'')?t.date:o.last};
 }
+function cleanCats(){let n=0;const fix=o=>{if(o&&o.cat&&/^(none|uncategorized|n\/a|-)$/i.test(o.cat.trim())){o.cat='';n++}};S.txns.forEach(fix);(S.archive||[]).forEach(fix);Object.values(S.payees||{}).forEach(fix);(S.recurring||[]).forEach(fix);return n}
 function ensurePayees(){if(!S.payees){S.payees={};S.txns.slice().sort(byDate).forEach(remember)}}
 function payeeMatches(q){
   q=q.trim().toLowerCase();
@@ -433,54 +451,67 @@ function pLabel(k,per,long){
   if(per==='quarterly')return long?'Q'+k.slice(6)+' '+k.slice(0,4):'Q'+k.slice(6)+'\u2019'+k.slice(2,4);
   const m=+k.slice(5,7);return long?MONTHS[m-1]+' '+k.slice(0,4):MONTHS[m-1].slice(0,3);
 }
-const catName=c=>(c||'').trim()||'Uncategorized';
+const NOCAT=/^(none|uncategorized|n\/a|-)?$/i;
+const catName=c=>NOCAT.test((c||'').trim())?'Uncategorized':c.trim();
 function spendData(){
   const {per,acct:ac,cards}=ui.sp;
-  const items=[...S.txns.filter(t=>!t.xfer),...(S.archive||[])].filter(t=>t.amount<0&&(ac==='all'||t.acct===ac)&&(cards||!CARDPAY.test(t.cat||'')));
+  const pool=[...S.txns.filter(t=>!t.xfer),...(S.archive||[])].filter(t=>(ac==='all'||t.acct===ac)&&(cards||!CARDPAY.test(t.cat||'')));
+  const items=pool.filter(t=>t.amount<0), income=pool.filter(t=>t.amount>0);
   const cur=pKey(today(),per);
-  if(!items.length)return {items,keys:[cur],tot:{[cur]:0},cats:{},cur,avgKeys:[],partialFirst:false};
-  const first=items.reduce((m,t)=>t.date<m?t.date:m,'9999');
+  if(!pool.length)return {items,income,keys:[cur],tot:{[cur]:0},inc:{[cur]:0},cats:{},cur,avgKeys:[],partialFirst:false};
+  const first=pool.reduce((m,t)=>t.date<m?t.date:m,'9999');
   const keys=[]; for(let k=pKey(first,per),g=0;g<600;g++){keys.push(k);if(k===cur||k>cur)break;k=pNext(k,per)}
-  const tot={},cats={}; keys.forEach(k=>{tot[k]=0;cats[k]={}});
+  const tot={},inc={},cats={}; keys.forEach(k=>{tot[k]=0;inc[k]=0;cats[k]={}});
   for(const t of items){const k=pKey(t.date,per);if(!(k in tot))continue;const v=-t.amount,c=catName(t.cat);tot[k]+=v;cats[k][c]=(cats[k][c]||0)+v}
+  for(const t of income){const k=pKey(t.date,per);if(k in inc)inc[k]+=t.amount}
   const slack={monthly:6,quarterly:14,yearly:31}[per];
   const partialFirst=(Date.parse(first)-Date.parse(pStart(keys[0],per)))/864e5>slack;
   let avgKeys=keys.filter(k=>k!==cur);
   if(partialFirst&&avgKeys.length>1)avgKeys=avgKeys.slice(1);
   else if(partialFirst&&avgKeys.length===1)avgKeys=[];
-  return {items,keys,tot,cats,cur,avgKeys,partialFirst,first};
+  return {items,income,keys,tot,inc,cats,cur,avgKeys,partialFirst,first};
 }
 function renderSpending(){
   const D=spendData(), P=PER[ui.sp.per], per=ui.sp.per;
   const nAvg=D.avgKeys.length;
-  const avg=nAvg?D.avgKeys.reduce((s,k)=>s+D.tot[k],0)/nAvg:null;
-  const curTot=D.tot[D.cur]||0;
+  const mean=(m,ks)=>ks.reduce((s,k)=>s+(m[k]||0),0)/ks.length;
+  const avg=nAvg?mean(D.tot,D.avgKeys):null, avgInc=nAvg?mean(D.inc,D.avgKeys):null;
+  const curTot=D.tot[D.cur]||0, curInc=D.inc[D.cur]||0;
   const shown=D.keys.slice(-P.show);
   const sel=ui.sp.sel&&D.tot[ui.sp.sel]!=null?ui.sp.sel:null;
   const max=Math.max(1,avg||0,...shown.map(k=>D.tot[k]));
   const bars=shown.map(k=>{const v=D.tot[k],h=Math.max(v?2:0,Math.round(v/max*100));
-    return `<button class="col${k===sel?' on':''}" data-act="spbar" data-k="${k}" aria-label="${pLabel(k,per,true)}: ${money(-v).replace('-','')}"><span class="bar${k===D.cur?' cur':''}" style="height:${h}%"></span></button>`}).join('');
+    return `<button class="col${k===sel?' on':''}" data-act="spbar" data-k="${k}" aria-label="${pLabel(k,per,true)}: spent ${money(v)}"><span class="bar${k===D.cur?' cur':''}" style="height:${h}%"></span></button>`}).join('');
   const xl=shown.map(k=>`<span${k===D.cur?' class="now"':''}>${pLabel(k,per)}</span>`).join('');
   const avgLine=avg!=null?`<div class="avg-line" style="bottom:${(avg/max*100).toFixed(2)}%"><span>avg</span></div>`:'';
+  const money0=v=>money(Math.round(v));
+  const flow=(sp,inc)=>{const net=inc-sp;return `<div class="flow">
+      <div><span class="lbl">Spent</span><b class="num debit-t">${money0(sp)}</b></div>
+      <div><span class="lbl">Income</span><b class="num credit-t">${money0(inc)}</b></div>
+      <div><span class="lbl">Net</span><b class="num ${net<0?'debit-t':'credit-t'}">${net<0?'−':'+'}${money0(Math.abs(net)).replace('-','')}</b></div></div>`};
 
-  // categories: averaged over the same periods as the headline number
-  const basis=nAvg?D.avgKeys:[D.cur];
+  // categories follow the selected bar, otherwise the same periods as the headline average
+  const basis=sel?[sel]:(nAvg?D.avgKeys:[D.cur]);
   const ct={}; basis.forEach(k=>{for(const[c,v]of Object.entries(D.cats[k]||{}))ct[c]=(ct[c]||0)+v});
   const catRows=Object.entries(ct).map(([c,v])=>[c,v/basis.length]).sort((a,b)=>b[1]-a[1]);
   const catSum=catRows.reduce((s,r)=>s+r[1],0)||1, catMax=catRows.length?catRows[0][1]:1;
-  const cats=catRows.length?catRows.map(([c,v])=>`<div class="cat"><div class="cat-top"><span class="cat-name">${esc(c)}</span><span class="num">${money(Math.round(v))}<small>${Math.round(v/catSum*100)}%</small></span></div><div class="track"><span style="width:${(v/catMax*100).toFixed(1)}%"></span></div></div>`).join(''):'<p class="hint">No payments in this range yet.</p>';
+  const inBasis=new Set(basis);
+  const listFor=c=>{const ts=D.items.filter(t=>catName(t.cat)===c&&inBasis.has(pKey(t.date,per))).sort((a,b)=>a.amount-b.amount);
+    const top=ts.slice(0,25);
+    return `<div class="cat-list">${top.map(t=>`<div class="cl-row"><span class="cl-date">${longDate(t.date).replace(/, \d{4}$/,'')}</span><span class="cl-name">${esc(t.payee||'No payee')}${ui.sp.acct==='all'?`<small>${esc(acctName(t.acct))}</small>`:''}</span><span class="num">${money(-t.amount)}</span></div>`).join('')}${ts.length>25?`<p class="hint">And ${ts.length-25} smaller.</p>`:''}</div>`};
+  const cats=catRows.length?catRows.map(([c,v])=>{const open=ui.sp.open===c;return `<div class="cat${open?' open':''}"><button class="cat-btn" data-act="spcat" data-c="${esc(c)}" aria-expanded="${open}"><span class="cat-top"><span class="cat-name">${esc(c)}<span class="chev-s" aria-hidden="true">›</span></span><span class="num">${money0(v)}<small>${Math.round(v/catSum*100)}%</small></span></span><span class="track"><span style="width:${(v/catMax*100).toFixed(1)}%"></span></span></button>${open?listFor(c):''}</div>`}).join(''):'<p class="hint">No payments in this range yet.</p>';
 
   const cmp=(v)=>{if(avg==null||!avg)return '';const d=(v-avg)/avg;const pct=Math.round(Math.abs(d)*100);
-    return pct<3?'<span class="cmp">about average</span>':`<span class="cmp ${d>0?'up':'down'}">${pct}% ${d>0?'above':'below'} average</span>`};
-  let detail='';
-  if(sel){const v=D.tot[sel];const top=Object.entries(D.cats[sel]||{}).sort((a,b)=>b[1]-a[1]).slice(0,3);
-    detail=`<div class="detail"><div class="detail-top"><b>${pLabel(sel,per,true)}${sel===D.cur?' so far':''}</b><span class="num">${money(v)}</span></div>${cmp(v)}${top.length?`<div class="hint">Top: ${top.map(([c,x])=>esc(c)+' '+money(x)).join(' · ')}</div>`:''}</div>`}
+    return pct<3?'<span class="cmp">Spending about average</span>':`<span class="cmp ${d>0?'up':'down'}">Spending ${pct}% ${d>0?'above':'below'} average</span>`};
 
   let basisNote;
   if(nAvg){const span=nAvg===1?pLabel(D.avgKeys[0],per,true):pLabel(D.avgKeys[0],per,true)+' to '+pLabel(D.avgKeys[nAvg-1],per,true);
-    basisNote=`Based on ${nAvg} full ${P.one}${nAvg>1?'s':''}, ${span}. This ${P.one} is still in progress, so it isn’t counted${D.partialFirst?`, and neither is ${pLabel(D.keys[0],per,true)}, when your records start partway through`:''}.`}
-  else basisNote=D.items.length?`There isn’t a full ${P.one} of records yet, so this shows ${pLabel(D.cur,per,true)} so far. An average appears once a ${P.one} is complete.`:'';
+    basisNote=`Averages use ${nAvg} full ${P.one}${nAvg>1?'s':''}, ${span}. This ${P.one} is still in progress, so it isn’t counted${D.partialFirst?`, and neither is ${pLabel(D.keys[0],per,true)}, when your records start partway through`:''}.`}
+  else basisNote=D.items.length?`There isn’t a full ${P.one} of records yet, so this shows ${pLabel(D.cur,per,true)} so far. Averages appear once a ${P.one} is complete.`:'';
 
+  const head=sel?`${pLabel(sel,per,true)}${sel===D.cur?' so far':''}`:(avg!=null?`Average per ${P.one}`:`${pLabel(D.cur,per,true)} so far`);
+  const sp=sel?D.tot[sel]:(avg!=null?avg:curTot), inc=sel?D.inc[sel]:(avg!=null?avgInc:curInc);
+  const catHead=sel?`By category, ${pLabel(sel,per,true)}${sel===D.cur?' so far':''}`:(nAvg?`Average per ${P.one} by category`:`By category, ${pLabel(D.cur,per,true)} so far`);
   const acctOpts=`<option value="all">All accounts</option>`+S.accounts.map(a=>`<option value="${a.id}"${a.id===ui.sp.acct?' selected':''}>${esc(a.name)}</option>`).join('');
   $('#app').innerHTML=`
     <header class="head">
@@ -491,18 +522,19 @@ function renderSpending(){
     </header>
     <div class="sp-body">
       <section class="panel">
-        <span class="lbl">${avg!=null?`Average per ${P.one}`:`This ${P.one} so far`}</span>
-        <div class="big num">${money(Math.round(avg!=null?avg:curTot))}</div>
-        ${avg!=null?`<div class="sub-line">This ${P.one} so far <b class="num">${money(curTot)}</b></div>`:''}
+        <div class="panel-top"><span class="lbl">${head}</span>${sel?`<button class="chip sm" data-act="spbar" data-k="${sel}">Show ${avg!=null?'average':'this '+P.one}</button>`:''}</div>
+        ${flow(sp,inc)}
+        ${sel?cmp(D.tot[sel]):(avg!=null?`<div class="sub-line">This ${P.one} so far: spent <b class="num">${money(curTot)}</b></div>`:'')}
         <div class="chart-wrap">
           <div class="chart${sel?' has-sel':''}">${avgLine}${bars}</div>
           <div class="xlabels">${xl}</div>
         </div>
-        ${detail||`<p class="hint tap">Tap a bar to see that ${P.one}.</p>`}
+        <p class="hint tap">Bars show spending. Tap one to see that ${P.one}.</p>
       </section>
       <section class="panel">
-        <span class="lbl">${nAvg?`Average per ${P.one} by category`:`By category, ${pLabel(D.cur,per,true)} so far`}</span>
+        <span class="lbl">${catHead}</span>
         <div class="cats">${cats}</div>
+        ${catRows.length?'<p class="hint tap">Tap a category to see its payments.</p>':''}
       </section>
       <label class="check sp-opt"><input type="checkbox" id="spCards" ${ui.sp.cards?'checked':''}><span>Count credit card payments<small>Off by default. Paying a card bill from checking would count the same purchases twice. Transfers are never counted.</small></span></label>
       ${basisNote?`<p class="hint">${basisNote}</p>`:''}
@@ -964,8 +996,9 @@ document.addEventListener('click',e=>{
     case 'repeating':sheetRepeating();break;
     case 'spending':ui.sp.sel=null;location.hash='spending';break;
     case 'register':if(location.hash){try{history.replaceState(null,'',location.pathname+location.search)}catch(err){location.hash=''}}ui.view='register';render();scrollTo(0,0);break;
-    case 'per':ui.sp.per=el.dataset.v;ui.sp.sel=null;try{localStorage.setItem(TKEY+'-per',ui.sp.per)}catch(err){}render();break;
-    case 'spbar':ui.sp.sel=ui.sp.sel===el.dataset.k?null:el.dataset.k;render();break;
+    case 'per':ui.sp.per=el.dataset.v;ui.sp.sel=null;ui.sp.open=null;try{localStorage.setItem(TKEY+'-per',ui.sp.per)}catch(err){}render();break;
+    case 'spbar':ui.sp.sel=ui.sp.sel===el.dataset.k?null:el.dataset.k;ui.sp.open=null;render();break;
+    case 'spcat':ui.sp.open=ui.sp.open===el.dataset.c?null:el.dataset.c;render();break;
     case 'rule':sheetRule(id);break;
     case 'stoprule':{if(el.dataset.armed){S.recurring=S.recurring.filter(r=>r.id!==id);save();sheetRepeating();render()}else{el.dataset.armed='1';el.textContent='Tap again to stop'}break}
     case 'postnow':{const r=(S.recurring||[]).find(x=>x.id===id);if(!r)return;ui.undo=JSON.stringify(S);postRule(r,r.next);const d=r.next;r.next=addPeriod(r.next,r.freq,r.day);save();render();toast(`Added ${ruleName(r)} for ${longDate(d)}`);break}
@@ -1014,8 +1047,8 @@ document.addEventListener('input',e=>{
   if(e.target.id==='fPayee')showSugg();if(e.target.id==='fCat')showCatSugg();if(e.target.id==='stDate'||e.target.id==='stCleared')statementPreview()});
 document.addEventListener('change',e=>{
   if(e.target.id==='stCleared')statementPreview();
-  if(e.target.id==='spAcct'){ui.sp.acct=e.target.value;ui.sp.sel=null;render()}
-  if(e.target.id==='spCards'){ui.sp.cards=e.target.checked;ui.sp.sel=null;render()}
+  if(e.target.id==='spAcct'){ui.sp.acct=e.target.value;ui.sp.sel=null;ui.sp.open=null;render()}
+  if(e.target.id==='spCards'){ui.sp.cards=e.target.checked;ui.sp.open=null;render()}
   if(e.target.id==='stripeToggle'){ui.stripes=e.target.checked;try{localStorage.setItem(TKEY+'-stripes',ui.stripes?'on':'off')}catch(err){}render()}
   if(e.target.id==='csvFile'&&e.target.files[0]){const r=new FileReader();r.onload=()=>{$('#csvIn').value=r.result;$('#impMsg').textContent='File loaded. Tap Import.'};r.readAsText(e.target.files[0])}
 });
@@ -1060,7 +1093,7 @@ document.addEventListener('scroll',closeSwipe,{passive:true});
 
 window.addEventListener('hashchange',()=>{const v=location.hash==='#spending'?'spending':'register';if(v!==ui.view){ui.view=v;closeSheet();render();scrollTo(0,0)}});
 try{const pp=localStorage.getItem(TKEY+'-per');if(PER[pp])ui.sp.per=pp}catch(e){}
-loadTheme(); load(); ensurePayees(); S.recurring=S.recurring||[];
+loadTheme(); load(); ensurePayees(); if(cleanCats())save(); S.recurring=S.recurring||[];
 {const n=generateDue();if(n)save();render();if(n){ui.undo=null;toast(`Added ${n} repeating entr${n>1?'ies':'y'} that came due`)}}
 })();
 </script>
