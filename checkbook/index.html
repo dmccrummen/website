@@ -143,6 +143,29 @@ button{cursor:pointer}
 .col{border:0;background:none;padding:0;height:100%;display:flex;align-items:flex-end;justify-content:center;cursor:pointer;position:relative;z-index:1}
 .bar{display:flex;flex-direction:column-reverse;width:100%;max-width:34px;border-radius:4px 4px 0 0;overflow:hidden;transition:opacity .15s;gap:1px;background:var(--surface)}
 .seg{display:block;min-height:1px;flex-basis:0}
+.bar.plain{background:var(--accent)}
+.bar.plain.cur{background:var(--accent-soft);outline:0;box-shadow:inset 0 0 0 1.5px var(--accent)}
+.gchart{display:grid;gap:12px;height:160px;border-bottom:1px solid var(--line)}
+.grp{display:flex;align-items:flex-end;justify-content:center;gap:2px;height:100%;border:0;background:none;padding:0;cursor:pointer}
+.grp i{display:block;flex:1;max-width:14px;border-radius:3px 3px 0 0;transition:opacity .15s}
+.grp.cur i{opacity:.6}
+.gchart.has-sel .grp:not(.on) i{opacity:.3}
+.xlabels.g{gap:12px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12.5px;color:var(--muted)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+.mini-head{display:grid;grid-template-columns:minmax(0,104px) minmax(0,1fr) 72px;gap:10px;font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-top:8px}
+.mini-head span:first-child{grid-column:2}.mini-head span:last-child{text-align:right}
+.cats.minis{gap:0;margin-top:2px}
+.minis .cat{border-bottom:1px solid var(--line)}
+.minis .cat:last-child{border-bottom:0}
+.mini-row{display:grid;grid-template-columns:minmax(0,104px) minmax(0,1fr) 72px;gap:10px;align-items:end;width:100%;border:0;background:none;padding:10px 0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.mini-row .cat-name{align-self:center;font-size:14px}
+.mini{display:grid;gap:2px;height:34px;align-items:end}
+.mini i{display:block;border-radius:2px 2px 0 0}
+.mini i.cur{opacity:.55}
+.mini i.dim{opacity:.25}
+.mini-row .num{align-self:center;text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums;font-weight:600;font-size:14px;white-space:nowrap}
+.mini-row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 .bar.cur{outline:1.5px dashed var(--muted);outline-offset:2px}
 .bar.cur .seg{opacity:.6}
 .dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px;vertical-align:0;flex:none}
@@ -455,7 +478,7 @@ function render(){
 }
 /* ---------- spending ---------- */
 const CARDPAY=/credit\s*card|card\s*pay/i;
-const PER={monthly:{one:'month',adj:'Monthly',show:12},quarterly:{one:'quarter',adj:'Quarterly',show:8},yearly:{one:'year',adj:'Yearly',show:6}};
+const PER={monthly:{one:'month',adj:'Monthly',show:12},quarterly:{one:'quarter',adj:'Quarterly',show:4},yearly:{one:'year',adj:'Yearly',show:4}};
 function pKey(d,per){const y=d.slice(0,4),m=+d.slice(5,7);return per==='monthly'?d.slice(0,7):per==='quarterly'?y+'-Q'+(Math.floor((m-1)/3)+1):y}
 function pStart(k,per){if(per==='monthly')return k+'-01';if(per==='quarterly')return k.slice(0,4)+'-'+pad((+k.slice(6)-1)*3+1)+'-01';return k+'-01-01'}
 function pNext(k,per){const y=+k.slice(0,4);if(per==='yearly')return String(y+1);if(per==='quarterly'){const q=+k.slice(6);return q===4?(y+1)+'-Q1':y+'-Q'+(q+1)}const m=+k.slice(5,7);return m===12?(y+1)+'-01':y+'-'+pad(m+1)}
@@ -498,11 +521,24 @@ function renderSpending(){
   const rankT={}; shown.forEach(k=>{for(const[c,v]of Object.entries(D.cats[k]||{}))rankT[c]=(rankT[c]||0)+v});
   const colorOf={}; Object.entries(rankT).sort((a,b)=>b[1]-a[1]).forEach(([c],i)=>{colorOf[c]=i<7?`var(--k${i+1})`:'var(--k-other)'});
   const colOf=c=>colorOf[c]||'var(--k-other)';
-  const bars=shown.map(k=>{const v=D.tot[k],h=Math.max(v?2:0,Math.round(v/max*100));
-    const segs=Object.entries(D.cats[k]||{}).sort((a,b)=>b[1]-a[1]).map(([c,x])=>`<span class="seg" style="flex-grow:${x};background:${colOf(c)}"></span>`).join('');
-    return `<button class="col${k===sel?' on':''}" data-act="spbar" data-k="${k}" aria-label="${pLabel(k,per,true)}: spent ${money(v)}"><span class="bar${k===D.cur?' cur':''}" style="height:${h}%">${segs}</span></button>`}).join('');
+  const monthly=per==='monthly';
   const xl=shown.map(k=>`<span${k===D.cur?' class="now"':''}>${pLabel(k,per)}</span>`).join('');
-  const avgLine=avg!=null?`<div class="avg-line" style="bottom:${(avg/max*100).toFixed(2)}%"><span>avg</span></div>`:'';
+  let chartHtml;
+  if(monthly){
+    // monthly: total per month; the categories get their own small charts below
+    const bars=shown.map(k=>{const v=D.tot[k],h=Math.max(v?2:0,Math.round(v/max*100));
+      return `<button class="col${k===sel?' on':''}" data-act="spbar" data-k="${k}" aria-label="${pLabel(k,per,true)}: spent ${money(v)}"><span class="bar plain${k===D.cur?' cur':''}" style="height:${h}%"></span></button>`}).join('');
+    const avgLine=avg!=null?`<div class="avg-line" style="bottom:${(avg/max*100).toFixed(2)}%"><span>avg</span></div>`:'';
+    chartHtml=`<div class="chart${sel?' has-sel':''}">${avgLine}${bars}</div><div class="xlabels">${xl}</div>`;
+  }else{
+    // quarterly and yearly: a group of side-by-side bars per period, top 5 categories plus Other
+    const top=Object.entries(rankT).sort((a,b)=>b[1]-a[1]).slice(0,5).map(r=>r[0]);
+    const series=k=>{const m=D.cats[k]||{};const out=top.map(c=>[c,m[c]||0]);const rest=Object.entries(m).filter(([c])=>!top.includes(c)).reduce((x,[,v])=>x+v,0);if(Object.keys(rankT).length>5)out.push(['Other',rest]);return out};
+    const gmax=Math.max(1,...shown.flatMap(k=>series(k).map(r=>r[1])));
+    const groups=shown.map(k=>`<button class="grp${k===sel?' on':''}${k===D.cur?' cur':''}" data-act="spbar" data-k="${k}" aria-label="${pLabel(k,per,true)}: spent ${money(D.tot[k])}">${series(k).map(([c,v])=>`<i style="height:${v?Math.max(2,v/gmax*100):0}%;background:${c==='Other'?'var(--k-other)':colOf(c)}"></i>`).join('')}</button>`).join('');
+    const legend=top.map(c=>`<span><i style="background:${colOf(c)}"></i>${esc(c)}</span>`).join('')+(Object.keys(rankT).length>5?'<span><i style="background:var(--k-other)"></i>Other</span>':'');
+    chartHtml=`<div class="gchart${sel?' has-sel':''}" style="grid-template-columns:repeat(${shown.length},minmax(0,1fr))">${groups}</div><div class="xlabels g">${xl}</div>${top.length?`<div class="legend">${legend}</div>`:''}`;
+  }
   const money0=v=>money(Math.round(v));
   const flow=(sp,inc)=>{const net=inc-sp;return `<div class="flow">
       <div><span class="lbl">Spent</span><b class="num debit-t">${money0(sp)}</b></div>
@@ -518,7 +554,11 @@ function renderSpending(){
   const listFor=c=>{const ts=D.items.filter(t=>catName(t.cat)===c&&inBasis.has(pKey(t.date,per))).sort((a,b)=>a.amount-b.amount);
     const top=ts.slice(0,25);
     return `<div class="cat-list">${top.map(t=>`<div class="cl-row"><span class="cl-date">${longDate(t.date).replace(/, \d{4}$/,'')}</span><span class="cl-name">${esc(t.payee||'No payee')}${nIncl>1?`<small>${esc(acctName(t.acct))}</small>`:''}</span><span class="num">${money(-t.amount)}</span></div>`).join('')}${ts.length>25?`<p class="hint">And ${ts.length-25} smaller.</p>`:''}</div>`};
-  const cats=catRows.length?catRows.map(([c,v])=>{const open=ui.sp.open===c;return `<div class="cat${open?' open':''}"><button class="cat-btn" data-act="spcat" data-c="${esc(c)}" aria-expanded="${open}"><span class="cat-top"><span class="cat-name"><i class="dot" style="background:${colOf(c)}"></i>${esc(c)}<span class="chev-s" aria-hidden="true">›</span></span><span class="num">${money0(v)}<small>${Math.round(v/catSum*100)}%</small></span></span><span class="track"><span style="width:${(v/catMax*100).toFixed(1)}%;background:${colOf(c)}"></span></span></button>${open?listFor(c):''}</div>`}).join(''):'<p class="hint">No payments in this range yet.</p>';
+  const shownMax={}; Object.keys(rankT).forEach(c=>{shownMax[c]=Math.max(1,...shown.map(k=>(D.cats[k]||{})[c]||0))});
+  const minis=Object.entries(rankT).sort((a,b)=>b[1]-a[1]).map(([c])=>{const open=ui.sp.open===c;const v=(ct[c]||0)/basis.length;
+    const mb=shown.map(k=>{const x=(D.cats[k]||{})[c]||0;return `<i class="${k===D.cur?'cur':''}${sel&&k!==sel?' dim':''}" style="height:${x?Math.max(4,x/shownMax[c]*100):0}%;background:${colOf(c)}"></i>`}).join('');
+    return `<div class="cat${open?' open':''}"><button class="mini-row" data-act="spcat" data-c="${esc(c)}" aria-expanded="${open}"><span class="cat-name"><i class="dot" style="background:${colOf(c)}"></i>${esc(c)}<span class="chev-s" aria-hidden="true">›</span></span><span class="mini" style="grid-template-columns:repeat(${shown.length},minmax(0,1fr))">${mb}</span><span class="num">${money0(v)}</span></button>${open?listFor(c):''}</div>`}).join('');
+  const cats=monthly&&Object.keys(rankT).length?minis:catRows.length?catRows.map(([c,v])=>{const open=ui.sp.open===c;return `<div class="cat${open?' open':''}"><button class="cat-btn" data-act="spcat" data-c="${esc(c)}" aria-expanded="${open}"><span class="cat-top"><span class="cat-name"><i class="dot" style="background:${colOf(c)}"></i>${esc(c)}<span class="chev-s" aria-hidden="true">›</span></span><span class="num">${money0(v)}<small>${Math.round(v/catSum*100)}%</small></span></span><span class="track"><span style="width:${(v/catMax*100).toFixed(1)}%;background:${colOf(c)}"></span></span></button>${open?listFor(c):''}</div>`}).join(''):'<p class="hint">No payments in this range yet.</p>';
 
   const cmp=(v)=>{if(avg==null||!avg)return '';const d=(v-avg)/avg;const pct=Math.round(Math.abs(d)*100);
     return pct<3?'<span class="cmp">Spending about average</span>':`<span class="cmp ${d>0?'up':'down'}">Spending ${pct}% ${d>0?'above':'below'} average</span>`};
@@ -544,15 +584,13 @@ function renderSpending(){
         <div class="panel-top"><span class="lbl">${head}</span>${sel?`<button class="chip sm" data-act="spbar" data-k="${sel}">Show ${avg!=null?'average':'this '+P.one}</button>`:''}</div>
         ${flow(sp,inc)}
         ${sel?cmp(D.tot[sel]):(avg!=null?`<div class="sub-line">This ${P.one} so far: spent <b class="num">${money(curTot)}</b></div>`:'')}
-        <div class="chart-wrap">
-          <div class="chart${sel?' has-sel':''}">${avgLine}${bars}</div>
-          <div class="xlabels">${xl}</div>
-        </div>
-        <p class="hint tap">Bars show spending. Tap one to see that ${P.one}.</p>
+        <div class="chart-wrap">${chartHtml}</div>
+        <p class="hint tap">${monthly?'Bars show total spending.':'Each group shows one '+P.one+', with a bar per category.'} Tap ${monthly?'one':'a group'} to see that ${P.one}.</p>
       </section>
       <section class="panel">
         <span class="lbl">${catHead}</span>
-        <div class="cats">${cats}</div>
+        ${monthly&&Object.keys(rankT).length?`<div class="mini-head"><span>Last ${shown.length} month${shown.length>1?'s':''}</span><span>${sel?pLabel(sel,per):nAvg?'Avg':'So far'}</span></div>`:''}
+        <div class="cats${monthly?' minis':''}">${cats}</div>
         ${catRows.length?'<p class="hint tap">Tap a category to see its payments.</p>':''}
       </section>
       <label class="check sp-opt"><input type="checkbox" id="spCards" ${ui.sp.cards?'checked':''}><span>Count credit card payments<small>Off by default. Paying a card bill from checking would count the same purchases twice. Transfers are never counted.</small></span></label>
