@@ -175,6 +175,11 @@ button{cursor:pointer}
 .xlabels{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;margin-top:5px}
 .xlabels span{font-size:11px;color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden}
 .xlabels span.now{color:var(--ink);font-weight:600}
+.sec-toggle{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;border:0;background:none;padding:2px 0;font:inherit;color:inherit;text-align:left;cursor:pointer;min-height:32px}
+.sec-sum{font-size:13px;color:var(--muted);white-space:nowrap;flex:none}
+.sec-toggle .chev-s{margin-left:6px}
+.sec-toggle[aria-expanded="true"] .chev-s{transform:rotate(90deg)}
+.sec-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
 .panel-top{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:28px}
 .flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:4px}
 .flow > div{display:grid;gap:2px;min-width:0}
@@ -322,7 +327,7 @@ const money=c=>fmt.format(c/100);
 const plain=c=>(c<0?'−':'+')+(Math.abs(c)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const longDate=s=>{const[y,m,d]=s.split('-').map(Number);return MONTHS[m-1].slice(0,3)+' '+d+', '+y};
 
-let S, ui={view:location.hash==='#spending'?'spending':'register',sp:{per:'monthly',acct:'all',cards:false,sel:null},stripes:true,select:false,sel:new Set(),undo:null,toastTimer:null,sheet:null};
+let S, ui={view:location.hash==='#spending'?'spending':'register',sp:{per:'monthly',acct:'all',cards:false,sel:null,catsOpen:false},stripes:true,select:false,sel:new Set(),undo:null,toastTimer:null,sheet:null};
 
 function blankState(){const a=uid();return {v:1,sample:false,seq:0,current:a,accounts:[{id:a,name:'Checking',opening:0,openingDate:today()}],txns:[]}}
 const FREQ={weekly:'Weekly',biweekly:'Every 2 weeks',monthly:'Monthly',quarterly:'Every 3 months',yearly:'Yearly'};
@@ -581,6 +586,8 @@ function renderSpending(){
   const head=sel?`${pLabel(sel,per,true)}${sel===D.cur?' so far':''}`:(avg!=null?`Average per ${P.one}`:`${pLabel(D.cur,per,true)} so far`);
   const sp=sel?D.tot[sel]:(avg!=null?avg:curTot), inc=sel?D.inc[sel]:(avg!=null?avgInc:curInc);
   const catHead=sel?`By category, ${pLabel(sel,per,true)}${sel===D.cur?' so far':''}`:(nAvg?`Average per ${P.one} by category`:`By category, ${pLabel(D.cur,per,true)} so far`);
+  const nCat=monthly?Object.keys(rankT).length:catRows.length;
+  const catSummary=nCat?`${nCat} categor${nCat>1?'ies':'y'}`:'None yet';
   const acctChips=S.accounts.map(a=>{const on=!exSet.has(a.id);return `<button class="chip acct-chip${on?' on':''}" data-act="spacct" data-id="${a.id}" aria-pressed="${on}"><span class="tick" aria-hidden="true">${on?'✓':''}</span>${esc(a.name)}</button>`}).join('');
   $('#app').innerHTML=`
     <header class="head">
@@ -598,10 +605,11 @@ function renderSpending(){
         <p class="hint tap">${monthly?'Bars show total spending.':'Each group shows one '+P.one+', with a bar per category.'} Tap ${monthly?'one':'a group'} to see that ${P.one}.</p>
       </section>
       <section class="panel">
-        <span class="lbl">${catHead}</span>
+        <button class="sec-toggle" data-act="spcats" aria-expanded="${ui.sp.catsOpen}"><span class="lbl">${catHead}</span><span class="sec-sum">${ui.sp.catsOpen?'Hide':catSummary}<span class="chev-s" aria-hidden="true">›</span></span></button>
+        ${!ui.sp.catsOpen?'':`
         ${monthly&&Object.keys(rankT).length?`<div class="mini-head"><span>Last ${shown.length} month${shown.length>1?'s':''}</span><span>${sel?pLabel(sel,per):nAvg?'Avg':'So far'}</span></div>`:''}
         <div class="cats${monthly?' minis':''}">${cats}</div>
-        ${catRows.length?'<p class="hint tap">Tap a category to see its payments.</p>':''}
+        ${catRows.length?'<p class="hint tap">Tap a category to see its payments.</p>':''}`}
       </section>
       <div class="sp-opt sd-row"><label for="spStart">Months start on day<small>${startDay()>1?`Each month runs from the ${ord(startDay())} to the ${ord(startDay()-1)}, labeled by the month it starts in. Quarters and years shift the same way.`:'Months follow the calendar. Pick your statement start day to match your statements.'}</small></label><select id="spStart">${Array.from({length:28},(_,i)=>`<option value="${i+1}"${i+1===startDay()?' selected':''}>${ord(i+1)}</option>`).join('')}</select></div>
       <label class="check sp-opt"><input type="checkbox" id="spCards" ${ui.sp.cards?'checked':''}><span>Count credit card payments<small>Off by default. Paying a card bill from checking would count the same purchases twice. Transfers are never counted.</small></span></label>
@@ -1068,6 +1076,7 @@ document.addEventListener('click',e=>{
     case 'per':ui.sp.per=el.dataset.v;ui.sp.sel=null;ui.sp.open=null;try{localStorage.setItem(TKEY+'-per',ui.sp.per)}catch(err){}render();break;
     case 'spbar':ui.sp.sel=ui.sp.sel===el.dataset.k?null:el.dataset.k;ui.sp.open=null;render();break;
     case 'spacct':{const x=new Set(S.spExclude||[]);x.has(id)?x.delete(id):x.add(id);S.spExclude=[...x];save();ui.sp.sel=null;ui.sp.open=null;render();break}
+    case 'spcats':ui.sp.catsOpen=!ui.sp.catsOpen;try{localStorage.setItem(TKEY+'-cats',ui.sp.catsOpen?'open':'closed')}catch(err){}render();break;
     case 'spcat':ui.sp.open=ui.sp.open===el.dataset.c?null:el.dataset.c;render();break;
     case 'rule':sheetRule(id);break;
     case 'stoprule':{if(el.dataset.armed){S.recurring=S.recurring.filter(r=>r.id!==id);save();sheetRepeating();render()}else{el.dataset.armed='1';el.textContent='Tap again to stop'}break}
@@ -1162,7 +1171,7 @@ document.addEventListener('pointercancel',e=>{const r=swipe.el;if(r&&e.pointerId
 document.addEventListener('scroll',closeSwipe,{passive:true});
 
 window.addEventListener('hashchange',()=>{const v=location.hash==='#spending'?'spending':'register';if(v!==ui.view){ui.view=v;closeSheet();render();scrollTo(0,0)}});
-try{const pp=localStorage.getItem(TKEY+'-per');if(PER[pp])ui.sp.per=pp}catch(e){}
+try{const pp=localStorage.getItem(TKEY+'-per');if(PER[pp])ui.sp.per=pp;ui.sp.catsOpen=localStorage.getItem(TKEY+'-cats')==='open'}catch(e){}
 loadTheme(); load(); ensurePayees(); if(cleanCats())save(); S.recurring=S.recurring||[];
 {const n=generateDue();if(n)save();render();if(n){ui.undo=null;toast(`Added ${n} repeating entr${n>1?'ies':'y'} that came due`)}}
 })();
